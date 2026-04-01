@@ -2,8 +2,11 @@ from fastapi import FastAPI, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from .database import get_db
+from .routers import venues
 
 app = FastAPI(title="OffPeak API")
+
+app.include_router(venues.router, prefix="/api/v1/venues")
 
 @app.get("/")
 async def root():

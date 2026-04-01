@@ -83,6 +83,7 @@ class Venue(Base):
     )
     besttime_venue_id: Optional[str] = Column(Text, unique=True, nullable=True)
     nombre: str = Column(Text, nullable=False)
+    direccion: Optional[str] = Column(Text, nullable=True)
     categoria: Optional[str] = Column(Text, nullable=True)
     latitud: float = Column(Float, nullable=False)
     longitud: float = Column(Float, nullable=False)
