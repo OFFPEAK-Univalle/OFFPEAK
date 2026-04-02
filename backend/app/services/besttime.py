@@ -1,12 +1,12 @@
 import os
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.models import Venue
+from app.models import Venue, CacheEntry
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +87,8 @@ async def _forecast_por_nombre_direccion(nombre: str, direccion: str) -> dict:
 # ─────────────────────────────
 async def obtener_forecast_venue(db: AsyncSession, venue_id: str) -> dict:
     """
-    Orquesta la integración con BestTime para un venue dado.
+    Orquesta la integración con BestTime para un venue dado usando un proxy de Caché local.
+    Implementa mitigación SCRUM-27 (Stale-while-error) y SCRUM-28 (Límites de peticiones).
     Retorna el forecast procesado listo para el endpoint REST.
     """
     if not BESTTIME_API_KEY:
@@ -102,10 +103,24 @@ async def obtener_forecast_venue(db: AsyncSession, venue_id: str) -> dict:
     if not venue:
         raise ValueError(f"Venue {venue_id} no encontrado o inactivo")
 
-    # 2. Llamar a BestTime según si ya tenemos su venue_id o no
+    # 2. Consultar Caché Temprano (Filtro SCRUM-28)
+    endpoint_key = "forecast_week"
+    cache_result = await db.execute(
+        select(CacheEntry).where(
+            CacheEntry.venue_id == venue.id,
+            CacheEntry.endpoint_key == endpoint_key
+        )
+    )
+    cache_entry = cache_result.scalar_one_or_none()
+
+    if cache_entry and cache_entry.is_valid:
+        logger.info(f"[Caché HIT] Retornando forecast desde PostgreSQL para {venue.nombre}. Expira en: {cache_entry.expira_en}")
+        return cache_entry.respuesta_raw
+
+    # 3. Llamar a BestTime (Caché Miss o Expirado)
     try:
         if venue.besttime_venue_id:
-            logger.info(f"Consultando BestTime por venue_id: {venue.besttime_venue_id}")
+            logger.info(f"[API Call] Consultando BestTime por venue_id para {venue.nombre}")
             data = await _forecast_por_venue_id(venue.besttime_venue_id)
         else:
             if not venue.direccion:
@@ -113,10 +128,10 @@ async def obtener_forecast_venue(db: AsyncSession, venue_id: str) -> dict:
                     f"El venue '{venue.nombre}' no tiene dirección ni besttime_venue_id. "
                     "Agregá una dirección o el besttime_venue_id en Supabase."
                 )
-            logger.info(f"Consultando BestTime por nombre/dirección: {venue.nombre}")
+            logger.info(f"[API Call] Consultando BestTime por nombre/dirección para {venue.nombre}")
             data = await _forecast_por_nombre_direccion(venue.nombre, venue.direccion)
 
-            # Guardar el venue_id, dirección, lat y lng que BestTime retornó
+            # Guardar datos auto-descubiertos devueltos por Besttime
             bt_info = data.get("venue_info", {})
             bt_venue_id = bt_info.get("venue_id")
             if bt_venue_id:
@@ -129,21 +144,28 @@ async def obtener_forecast_venue(db: AsyncSession, venue_id: str) -> dict:
                 venue.longitud = bt_info["venue_lng"]
             if any([bt_venue_id, bt_info.get("venue_address"), bt_info.get("venue_lat")]):
                 await db.commit()
-                logger.info(f"Venue actualizado desde BestTime: id={bt_venue_id}, dir={bt_info.get('venue_address')}")
+                logger.info(f"[DB] Venue actualizado desde BestTime: id={bt_venue_id}")
 
     except httpx.HTTPStatusError as e:
-        logger.error(f"Error HTTP BestTime: {e.response.text}")
+        logger.error(f"[Error] Fallo HTTP BestTime: {e.response.text}")
+        if cache_entry:
+            logger.warning(f"¡MITIGACIÓN SCRUM-27 ACTIVA! Besttime devolvió un HTTP Error. Entregando caché vencido como fallback a la App móvil.")
+            return cache_entry.respuesta_raw
         raise BestTimeError(f"BestTime respondió con error {e.response.status_code}")
+        
     except httpx.RequestError as e:
-        logger.error(f"Error de conexión con BestTime: {e}")
-        raise BestTimeError("No se pudo conectar con BestTime. Verificá tu conexión.")
+        logger.error(f"[Error] Sin Conexión con BestTime: {e}")
+        if cache_entry:
+            logger.warning(f"¡MITIGACIÓN SCRUM-27 ACTIVA! Besttime dio Request Timeout. Entregando caché vencido como fallback a la App móvil.")
+            return cache_entry.respuesta_raw
+        raise BestTimeError("No se pudo conectar con BestTime y no tenemos historial de caché previo.")
 
-    # 3. Parsear y retornar
+    # 4. Parsear y consolidar respuesta JSON final
     venue_forecasted = data.get("venue_forecasted", False)
     forecasts = _parsear_forecasts(data)
     venue_info = data.get("venue_info", {})
 
-    return {
+    respuesta_final = {
         "venue_id":          str(venue.id),
         "venue_nombre":      venue.nombre,
         "besttime_venue_id": venue.besttime_venue_id,
@@ -157,3 +179,25 @@ async def obtener_forecast_venue(db: AsyncSession, venue_id: str) -> dict:
         "total_slots":       len(forecasts),
         "forecasts":         forecasts,
     }
+
+    # 5. Guardar Upsert en Caché PostgreSQL por 14 días (Filtro SCRUM-28)
+    # Se añade offset de 14 días a la fecha usando validación segura por tzinfo UTC integrada en datetime.now
+    expiracion = datetime.now(timezone.utc) + timedelta(days=14)
+    
+    if cache_entry:
+        logger.info(f"[DB] Actualizando CacheEntry existente. Vida extendida hasta: {expiracion.isoformat()}")
+        cache_entry.respuesta_raw = respuesta_final
+        cache_entry.expira_en = expiracion
+    else:
+        logger.info(f"[DB] Creando nuevo CacheEntry. Vida válida hasta: {expiracion.isoformat()}")
+        nuevo_cache = CacheEntry(
+            venue_id=venue.id,
+            endpoint_key=endpoint_key,
+            respuesta_raw=respuesta_final,
+            expira_en=expiracion
+        )
+        db.add(nuevo_cache)
+        
+    await db.commit()
+
+    return respuesta_final

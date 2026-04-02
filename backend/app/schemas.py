@@ -58,3 +58,20 @@ class BestTimeForecastData(BaseModel):
     """Estructura de la respuesta enriquecida de BestTime."""
     venue_info: VenueResponse
     forecasts: List[ForecastResponse]
+
+# ─────────────────────────────
+# CACHE SCHEMAS
+# ─────────────────────────────
+class CacheEntryBase(BaseModel):
+    venue_id: UUID4
+    endpoint_key: str = Field(..., description="Clave del endpoint cacheado ej: 'forecast_week'")
+    respuesta_raw: dict = Field(..., description="JSON crudo original")
+    expira_en: datetime
+
+class CacheEntryResponse(CacheEntryBase):
+    id: UUID4
+    creado_en: datetime
+
+    class Config:
+        from_attributes = True
+

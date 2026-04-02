@@ -196,7 +196,8 @@ class CacheEntry(Base):
     @property
     def is_valid(self) -> bool:
         """Devuelve True si el caché todavía no expiró."""
-        return datetime.utcnow().replace(tzinfo=self.expira_en.tzinfo) < self.expira_en
+        from datetime import timezone
+        return datetime.now(timezone.utc) < self.expira_en
 
     def __repr__(self) -> str:
         return (

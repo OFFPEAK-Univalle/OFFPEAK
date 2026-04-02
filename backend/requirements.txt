@@ -4,20 +4,20 @@
 # ─────────────────────────────
 
 # Servidor web
-fastapi==0.111.0
-uvicorn[standard]==0.29.0
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
 
 # Base de datos
-sqlalchemy==2.0.30
-asyncpg==0.29.0          # Driver async para PostgreSQL (Supabase)
-alembic==1.13.1          # Migraciones de BD
+sqlalchemy>=2.0.30
+asyncpg>=0.29.0          # Driver async para PostgreSQL (Supabase)
+alembic>=1.13.1          # Migraciones de BD
 
 # Validación de datos
-pydantic==2.7.1
-pydantic-settings==2.2.1 # Para leer variables del .env
+pydantic>=2.9.0
+pydantic-settings>=2.2.1 # Para leer variables del .env
 
 # HTTP client (llamadas a BestTime API)
-httpx==0.27.0
+httpx>=0.27.0
 
 # Variables de entorno
-python-dotenv==1.0.1
+python-dotenv>=1.0.1
