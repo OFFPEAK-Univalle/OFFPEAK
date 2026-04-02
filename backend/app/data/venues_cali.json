@@ -1,0 +1,47 @@
+[
+  {
+    "nombre": "Bulevar del Río",
+    "direccion": "Centro Histórico, Cali",
+    "categoria": "Parque/Turismo",
+    "latitud": 3.4533,
+    "longitud": -76.5360,
+    "ciudad": "Cali",
+    "activo": true
+  },
+  {
+    "nombre": "Barrio San Antonio",
+    "direccion": "Comuna 3, Cali",
+    "categoria": "Cultura/Gastronomía",
+    "latitud": 3.4475,
+    "longitud": -76.5401,
+    "ciudad": "Cali",
+    "activo": true
+  },
+  {
+    "nombre": "Parque del Perro",
+    "direccion": "Barrio San Fernando, Cali",
+    "categoria": "Gastronomía/Ocio",
+    "latitud": 3.4314,
+    "longitud": -76.5448,
+    "ciudad": "Cali",
+    "activo": true
+  },
+  {
+    "nombre": "Cristo Rey",
+    "direccion": "Cerro de los Cristales, Cali",
+    "categoria": "Turismo/Mirador",
+    "latitud": 3.4354,
+    "longitud": -76.5651,
+    "ciudad": "Cali",
+    "activo": true
+  },
+  {
+    "nombre": "Plazoleta Jairo Varela",
+    "direccion": "Avenida 2 Norte, Cali",
+    "categoria": "Cultura/Plaza",
+    "latitud": 3.4542,
+    "longitud": -76.5332,
+    "ciudad": "Cali",
+    "activo": true
+  }
+]
