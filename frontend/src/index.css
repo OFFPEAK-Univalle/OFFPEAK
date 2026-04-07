@@ -1,0 +1,193 @@
+/**
+ * Archivo: index.css
+ * Propósito: Define el sistema de diseño global, variables y clases utilitarias
+ * Descripción:
+ * 1. Define paleta de colores moderna (Fondo oscuro, Acentos en Cyan, Rojo crítico, Naranja moderado, Verde óptimo).
+ * 2. Define tipografía general, márgenes y comportamientos básicos del body.
+ * 3. Crea utilidades "glassmorphism" (.glass-panel) para simular los paneles translúcidos.
+ * 4. Ajustes base para tablas y contenedores generales.
+ */
+
+/* 1. Variables de Diseño (Tokens) */
+:root {
+  /* Fondo general y Superficies */
+  --bg-main: #0a0e17; /* Fondo súper oscuro azulado */
+  --bg-sidebar: #0f1522; /* Ligeramente más claro para separar */
+  --surface-primary: #151b2b; /* Paneles principales */
+  --surface-secondary: #1e2638; /* Elementos sobre paneles (ej: chips) */
+  --surface-hover: #263045; /* Hovers */
+  
+  /* Gradientes y bordes translúcidos */
+  --border-light: rgba(255, 255, 255, 0.05);
+
+  /* Acentos de estado (Neon vibe) */
+  --accent-cyan: #00d1ff; /* Primario (links, resaltes) */
+  --status-critical: #ff3b3b; /* Rojo neón */
+  --status-bg-critical: rgba(255, 59, 59, 0.15);
+  
+  --status-moderate: #ffb800; /* Amarillo/naranja */
+  --status-bg-moderate: rgba(255, 184, 0, 0.15);
+  
+  --status-optimal: #00e676; /* Verde intenso */
+  --status-bg-optimal: rgba(0, 230, 118, 0.15);
+  
+  /* Textos */
+  --text-primary: #ffffff;
+  --text-secondary: #8b95a5;
+  --text-muted: #5e687b;
+
+  /* Constantes de dimensiones */
+  --sidebar-width-desktop: 260px;
+}
+
+/* 2. Reset Base y Body */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* 3. Utilidades: Glass Panel - Efecto cristal Premium */
+.glass-panel {
+  background-color: var(--surface-primary);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.glass-panel-inner {
+  background-color: var(--surface-secondary);
+  border-radius: 8px;
+}
+
+/* Títulos y tipografía global */
+h1, h2, h3, h4, h5 {
+  font-weight: 600;
+  letter-spacing: -0.5px;
+}
+
+.text-cyber {
+  color: var(--accent-cyan);
+}
+
+.stat-value {
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -1px;
+}
+
+/* 4. Estilos de Leaflet custom (Sobrescribiendo estilos por defecto del mapa para modo dark) */
+.leaflet-container {
+  background-color: var(--surface-primary) !important;
+  border-radius: 8px;
+  width: 100%;
+  height: 100%;
+}
+
+.leaflet-popup-content-wrapper {
+  background-color: var(--surface-secondary) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-light);
+}
+
+.leaflet-popup-tip {
+  background-color: var(--surface-secondary) !important;
+}
+
+.leaflet-bar {
+  border: 1px solid var(--border-light) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+  border-radius: 8px !important;
+  overflow: hidden;
+}
+
+.leaflet-bar a {
+  background-color: var(--surface-primary) !important;
+  color: var(--text-primary) !important;
+  border-bottom: 1px solid var(--border-light) !important;
+}
+
+.leaflet-bar a:hover {
+  background-color: var(--surface-hover) !important;
+  color: var(--accent-cyan) !important;
+}
+
+.leaflet-bar a.leaflet-disabled {
+  background-color: var(--bg-main) !important;
+  color: var(--text-muted) !important;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-main);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--surface-secondary);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--surface-hover);
+}
+
+/* 5. Responsive Utilities para Grids y Layouts */
+.responsive-grid {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.responsive-grid-2-1 {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  align-items: stretch;
+}
+
+.responsive-grid-3 {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.header-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+/* Media Queries móviles */
+@media (max-width: 1024px) {
+  .responsive-grid-2-1 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .responsive-grid-3 {
+    grid-template-columns: 1fr;
+  }
+  .header-flex {
+    flex-direction: column;
+    gap: 16px;
+  }
+  .stat-value {
+    font-size: 1.75rem;
+  }
+  .glass-panel {
+    padding: 16px !important;
+  }
+}
+
