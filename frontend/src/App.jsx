@@ -19,6 +19,7 @@ import Dashboard from './pages/Dashboard';
 import ZonasCriticas from './pages/ZonasCriticas';
 import Alertas from './pages/Alertas';
 import Historial from './pages/Historial';
+import AuthPage from './pages/AuthPage';
 
 const SIDEBAR_ITEMS = [
   { id: 'dashboard', label: 'VISTA GENERAL', path: '/dashboard', icon: LayoutDashboard },
@@ -31,7 +32,7 @@ const SIDEBAR_ITEMS = [
 
 function AppLayout({ children }) {
   // Estado para controlar comportamiento en móvil (si fuese necesario expandir)
-  
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh', width: '100%' }}>
       {/* 
@@ -94,7 +95,16 @@ function AppLayout({ children }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>ÚLTIMA ACTUALIZACIÓN: 14:02</span>
             <Bell size={18} color="var(--text-secondary)" />
-            <LogOut size={18} color="var(--text-secondary)" />
+            <LogOut
+              size={18}
+              color="var(--text-secondary)"
+              style={{ cursor: 'pointer' }}
+              onClick={() => {
+                localStorage.removeItem('token');
+                window.location.reload();
+              }}
+              title="Cerrar sesión"
+            />
           </div>
         </header>
 
@@ -103,7 +113,8 @@ function AppLayout({ children }) {
       </main>
 
       {/* Add inline media queries for responsiveness */}
-      <style dangerouslySetInnerHTML={{__html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .sidebar {
           width: var(--sidebar-width-desktop);
           background-color: var(--bg-sidebar);
@@ -153,8 +164,9 @@ function AppLayout({ children }) {
           );
         })}
       </nav>
-      
-      <style dangerouslySetInnerHTML={{__html: `
+
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .mobile-bottom-nav {
           display: none;
           position: fixed;
@@ -196,22 +208,31 @@ function AppLayout({ children }) {
 }
 
 function App() {
+  const token = localStorage.getItem('token');
+  const isAuthenticated = !!token;
+
   return (
     <Router>
-      <AppLayout>
+      {!isAuthenticated ? (
         <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/zonas" element={<ZonasCriticas />} />
-          <Route path="/alertas" element={<Alertas />} />
-          <Route path="/historial" element={<Historial />} />
-          <Route path="*" element={
-            <div style={{ textAlign: 'center', marginTop: '60px' }}>
-              <h2 style={{ color: 'var(--text-muted)' }}>Pantalla en construcción</h2>
-            </div>
-          } />
+          <Route path="*" element={<AuthPage />} />
         </Routes>
-      </AppLayout>
+      ) : (
+        <AppLayout>
+          <Routes>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/zonas" element={<ZonasCriticas />} />
+            <Route path="/alertas" element={<Alertas />} />
+            <Route path="/historial" element={<Historial />} />
+            <Route path="*" element={
+              <div style={{ textAlign: 'center', marginTop: '60px' }}>
+                <h2 style={{ color: 'var(--text-muted)' }}>Pantalla en construcción</h2>
+              </div>
+            } />
+          </Routes>
+        </AppLayout>
+      )}
     </Router>
   );
 }
