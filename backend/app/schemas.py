@@ -6,16 +6,16 @@ from datetime import datetime
 # VENUE SCHEMAS
 # ─────────────────────────────
 class VenueBase(BaseModel):
-    nombre: str = Field(..., example="Centro Comercial Chipichape")
+    nombre: Optional[str] = Field(None, example="Centro Comercial Chipichape")
     direccion: Optional[str] = Field(None, example="Calle 38 N # 6N-35")
     categoria: Optional[str] = Field(None, example="Shopping Mall")
-    latitud: float = Field(..., example=3.4735)
-    longitud: float = Field(..., example=-76.5262)
+    latitud: Optional[float] = Field(None, example=3.4735)
+    longitud: Optional[float] = Field(None, example=-76.5262)
     ciudad: str = Field("Cali", example="Cali")
     activo: bool = Field(True, example=True)
 
 class VenueCreate(VenueBase):
-    pass
+    besttime_venue_id: Optional[str] = Field(None, description="ID del venue en BestTime")
 
 class VenueUpdate(BaseModel):
     """Schema para PATCH — todos los campos son opcionales."""
