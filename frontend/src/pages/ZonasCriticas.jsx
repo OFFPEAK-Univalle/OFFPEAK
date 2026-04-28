@@ -10,55 +10,16 @@
 
 import React, { useState } from 'react';
 import { AreaChart, Area, ResponsiveContainer, XAxis, Tooltip, ReferenceLine } from 'recharts';
-import { ArrowLeft, Clock, AlertTriangle, Activity, MapPin, Navigation } from 'lucide-react';
+import { ArrowLeft, Clock, AlertTriangle, Activity, MapPin, Navigation, Bus, Car } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from 'react-leaflet';
-import L from 'leaflet';
-
-// --- DATOS MOCK PARA ZONA (Detalle) ---
-const zoneData = {
-  nombre: "Bulevar del Rio",
-  comuna: "Comuna 3 - Centro Histórico",
-  estado: "CRÍTICO",
-  afluenciaActual: 78,
-  afluenciaPico: 92,
-  horaRiesgo: "5:00 PM"
-};
-
-// Datos Simulados Para Mapa (Marcadores de Venues)
-const venuesMapMock = [
-  { id: 1, name: 'Bulevar del Rio', coords: [3.4516, -76.5320], status: 'critical' },
-  { id: 2, name: 'Terminal de Transportes', coords: [3.4682, -76.5255], status: 'critical' },
-  { id: 3, name: 'Jardín Plaza', coords: [3.3768, -76.5284], status: 'moderate' },
-  { id: 4, name: 'Estación Universidades', coords: [3.3735, -76.5305], status: 'optimal' },
-];
-
-// Creación de Íconos Personalizados de Leaflet usando HTML nativo y las variables CSS creadas
-const createCustomIcon = (statusStr) => {
-  let colorVar = 'var(--status-optimal)';
-  if (statusStr === 'critical') colorVar = 'var(--status-critical)';
-  if (statusStr === 'moderate') colorVar = 'var(--status-moderate)';
-
-  return L.divIcon({
-    className: 'custom-leaflet-marker',
-    html: `<div style="width: 16px; height: 16px; background-color: ${colorVar}; border-radius: 50%; border: 2px solid var(--surface-primary); box-shadow: 0 0 10px ${colorVar};"></div>`,
-    iconSize: [16, 16],
-    iconAnchor: [8, 8],
-    popupAnchor: [0, -8]
-  });
-};
-
-const dailyChartData = [
-  { time: '06 AM', value: 15 },
-  { time: '09 AM', value: 25 },
-  { time: '12 PM', value: 45 },
-  { time: '03 PM', value: 60 },
-  { time: '06 PM', value: 92 },
-  { time: '09 PM', value: 80 },
-  { time: '11 PM', value: 40 },
-];
+import { venuesMapMock, parkingMock, mioMock, dailyChartData, zoneData } from '../data/mockData';
+import { createCustomIcon, createParkingIcon, createMioIcon } from '../utils/icons';
 
 export default function ZonasCriticas() {
+  const [showZonas, setShowZonas] = useState(true);
+  const [showParking, setShowParking] = useState(false);
+  const [showMio, setShowMio] = useState(false);
   const [alternativas, setAlternativas] = useState([]);
   const [loadingDesvios, setLoadingDesvios] = useState(false);
 
@@ -92,13 +53,32 @@ export default function ZonasCriticas() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '32px' }}>
       
       {/* Nuevo Header de Mapa Responsivo (Integración Leaflet) */}
-      <div className="glass-panel" style={{ padding: '0', overflow: 'hidden', height: '350px', position: 'relative', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'var(--surface-primary)', zIndex: 10 }}>
-           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-             <MapPin size={18} color="var(--accent-cyan)" />
-             <h3 style={{ margin: 0, fontSize: '1rem', letterSpacing: '0.5px' }}>Vista General Geográfica (Cali)</h3>
+      <div className="glass-panel" style={{ padding: '0', overflow: 'hidden', height: '400px', position: 'relative', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border-light)', display: 'flex', flexDirection: 'column', gap: '16px', backgroundColor: 'var(--surface-primary)', zIndex: 10 }}>
+           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+               <MapPin size={18} color="var(--accent-cyan)" />
+               <h3 style={{ margin: 0, fontSize: '1rem', letterSpacing: '0.5px' }}>Vista General Geográfica (Cali)</h3>
+             </div>
+             <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>FILTROS DE MULTIMOVILIDAD</span>
            </div>
-           <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>SELECCIONA UN MARCADOR</span>
+           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <button 
+                onClick={() => setShowZonas(!showZonas)}
+                style={{ backgroundColor: showZonas ? 'var(--accent-cyan)' : 'transparent', color: showZonas ? 'var(--bg-main)' : 'var(--text-secondary)', border: showZonas ? 'none' : '1px solid var(--border-light)', padding: '6px 12px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }}>
+                <MapPin size={14} /> ZONAS CRÍTICAS
+              </button>
+              <button 
+                onClick={() => setShowParking(!showParking)}
+                style={{ backgroundColor: showParking ? '#3b82f6' : 'transparent', color: showParking ? '#fff' : 'var(--text-secondary)', border: showParking ? 'none' : '1px solid var(--border-light)', padding: '6px 12px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }}>
+                <Car size={14} /> PARQUEADEROS
+              </button>
+              <button 
+                onClick={() => setShowMio(!showMio)}
+                style={{ backgroundColor: showMio ? '#f97316' : 'transparent', color: showMio ? '#fff' : 'var(--text-secondary)', border: showMio ? 'none' : '1px solid var(--border-light)', padding: '6px 12px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }}>
+                <Bus size={14} /> ESTACIONES MIO
+              </button>
+           </div>
         </div>
         <div style={{ flex: 1, width: '100%' }}>
           <MapContainer center={[3.42158, -76.5205]} zoom={12} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
@@ -107,7 +87,7 @@ export default function ZonasCriticas() {
               url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
               attribution='&copy; <a href="https://carto.com/">CARTO</a>'
             />
-            {venuesMapMock.map((venue) => (
+            {showZonas && venuesMapMock.map((venue) => (
               <Marker key={venue.id} position={venue.coords} icon={createCustomIcon(venue.status)}>
                 <Popup className="premium-popup">
                   <div style={{ padding: '4px' }}>
@@ -117,9 +97,8 @@ export default function ZonasCriticas() {
                 </Popup>
               </Marker>
             ))}
-            
             {/* Dibujamos las alternativas recomendadas por el Algoritmo */}
-            {alternativas.map((alt) => (
+            {alternativas && alternativas.map((alt) => (
               <React.Fragment key={`alt-${alt.venue_id}`}>
                 <Marker 
                   position={[alt.latitud, alt.longitud]} 
@@ -143,6 +122,28 @@ export default function ZonasCriticas() {
                   opacity={0.8}
                 />
               </React.Fragment>
+            ))}
+
+            {showParking && parkingMock.map((park) => (
+              <Marker key={park.id} position={park.coords} icon={createParkingIcon()}>
+                <Popup className="premium-popup">
+                  <div style={{ padding: '4px' }}>
+                    <strong style={{ display: 'block', marginBottom: '4px', color: 'var(--text-primary)' }}>{park.name}</strong>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Disponibilidad: <span style={{color: park.status === 'optimal' ? 'var(--status-optimal)' : 'var(--status-moderate)'}}>{park.status === 'optimal' ? 'Alta' : 'Baja'}</span></span>
+                  </div>
+                </Popup>
+              </Marker>
+            ))}
+
+            {showMio && mioMock.map((mio) => (
+              <Marker key={mio.id} position={mio.coords} icon={createMioIcon()}>
+                <Popup className="premium-popup">
+                  <div style={{ padding: '4px' }}>
+                    <strong style={{ display: 'block', marginBottom: '4px', color: 'var(--text-primary)' }}>{mio.name}</strong>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Sistema de Transporte Masivo</span>
+                  </div>
+                </Popup>
+              </Marker>
             ))}
           </MapContainer>
         </div>
