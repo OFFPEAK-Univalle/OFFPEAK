@@ -5,14 +5,22 @@ from sqlalchemy import text
 from contextlib import asynccontextmanager
 from .database import get_db, engine
 from .models import Base
-from .routers import venues, rerouting
+from .routers import venues, rerouting, admin
+from .services.tasks import start_cleaner_task, stop_cleaner_task
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Crear automáticamente las tablas en Supabase si no existen
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        
+    # Iniciar la tarea de limpieza en segundo plano (cada 10 min = 600s)
+    start_cleaner_task(600)
+    
     yield
+    
+    # Detener la tarea al cerrar la aplicación
+    stop_cleaner_task()
 
 app = FastAPI(title="OffPeak API", lifespan=lifespan)
 
@@ -26,6 +34,7 @@ app.add_middleware(
 
 app.include_router(venues.router, prefix="/api/v1/venues")
 app.include_router(rerouting.router, prefix="/api/v1/rerouting")
+app.include_router(admin.router, prefix="/api/v1/admin")
 
 @app.get("/")
 async def root():

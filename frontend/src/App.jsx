@@ -20,6 +20,7 @@ import ZonasCriticas from './pages/ZonasCriticas';
 import Alertas from './pages/Alertas';
 import Historial from './pages/Historial';
 import AuthPage from './pages/AuthPage';
+import AdminDashboard from './pages/AdminDashboard';
 
 const SIDEBAR_ITEMS = [
   { id: 'dashboard', label: 'VISTA GENERAL', path: '/dashboard', icon: LayoutDashboard },
@@ -225,6 +226,7 @@ function App() {
             <Route path="/zonas" element={<ZonasCriticas />} />
             <Route path="/alertas" element={<Alertas />} />
             <Route path="/historial" element={<Historial />} />
+            <Route path="/configuracion" element={<AdminDashboard />} />
             <Route path="*" element={
               <div style={{ textAlign: 'center', marginTop: '60px' }}>
                 <h2 style={{ color: 'var(--text-muted)' }}>Pantalla en construcción</h2>
