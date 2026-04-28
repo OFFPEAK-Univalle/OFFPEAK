@@ -5,7 +5,7 @@ from sqlalchemy import text
 from contextlib import asynccontextmanager
 from .database import get_db, engine
 from .models import Base
-from .routers import venues
+from .routers import venues, rerouting
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -25,6 +25,7 @@ app.add_middleware(
 )
 
 app.include_router(venues.router, prefix="/api/v1/venues")
+app.include_router(rerouting.router, prefix="/api/v1/rerouting")
 
 @app.get("/")
 async def root():

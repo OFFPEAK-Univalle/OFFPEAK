@@ -8,11 +8,11 @@
  * 4. Animaciones y estado visual estandarizado.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { AreaChart, Area, ResponsiveContainer, XAxis, Tooltip, ReferenceLine } from 'recharts';
-import { ArrowLeft, Clock, AlertTriangle, Activity, MapPin } from 'lucide-react';
+import { ArrowLeft, Clock, AlertTriangle, Activity, MapPin, Navigation } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 
 // --- DATOS MOCK PARA ZONA (Detalle) ---
@@ -59,6 +59,35 @@ const dailyChartData = [
 ];
 
 export default function ZonasCriticas() {
+  const [alternativas, setAlternativas] = useState([]);
+  const [loadingDesvios, setLoadingDesvios] = useState(false);
+
+  const fetchDesvios = async () => {
+    setLoadingDesvios(true);
+    try {
+      // Coordenadas origen (Bulevar del Rio simulado)
+      const response = await fetch('http://localhost:8000/api/v1/rerouting/recommend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          latitud: 3.4516,
+          longitud: -76.5320,
+          categoria_objetivo: null,
+          radio_metros: 3000,
+          limite: 2
+        })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setAlternativas(data);
+      }
+    } catch (error) {
+      console.error("Error fetching desvios:", error);
+    } finally {
+      setLoadingDesvios(false);
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '32px' }}>
       
@@ -87,6 +116,33 @@ export default function ZonasCriticas() {
                   </div>
                 </Popup>
               </Marker>
+            ))}
+            
+            {/* Dibujamos las alternativas recomendadas por el Algoritmo */}
+            {alternativas.map((alt) => (
+              <React.Fragment key={`alt-${alt.venue_id}`}>
+                <Marker 
+                  position={[alt.latitud, alt.longitud]} 
+                  icon={createCustomIcon('optimal')}
+                >
+                  <Popup className="premium-popup">
+                    <div style={{ padding: '4px' }}>
+                      <strong style={{ display: 'block', marginBottom: '4px' }}>{alt.nombre}</strong>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--accent-cyan)', fontWeight: 'bold' }}>Alternativa Recomendada</span>
+                      <br/>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{alt.razon_desvio}</span>
+                    </div>
+                  </Popup>
+                </Marker>
+                {/* Trazamos una línea desde el origen (Bulevar) hasta la alternativa */}
+                <Polyline 
+                  positions={[ [3.4516, -76.5320], [alt.latitud, alt.longitud] ]} 
+                  color="var(--accent-cyan)" 
+                  dashArray="5, 10"
+                  weight={3}
+                  opacity={0.8}
+                />
+              </React.Fragment>
             ))}
           </MapContainer>
         </div>
@@ -195,7 +251,13 @@ export default function ZonasCriticas() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-          <button style={{ backgroundColor: 'var(--accent-cyan)', color: 'var(--bg-main)', border: 'none', padding: '12px 24px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', letterSpacing: '1px', fontSize: '0.75rem' }}>DESPACHAR</button>
+          <button 
+            onClick={fetchDesvios}
+            disabled={loadingDesvios}
+            style={{ backgroundColor: 'var(--accent-cyan)', color: 'var(--bg-main)', border: 'none', padding: '12px 24px', borderRadius: '6px', fontWeight: 'bold', cursor: loadingDesvios ? 'not-allowed' : 'pointer', letterSpacing: '1px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '8px', opacity: loadingDesvios ? 0.7 : 1 }}>
+            <Navigation size={16} />
+            {loadingDesvios ? 'CALCULANDO...' : 'CALCULAR DESVÍO'}
+          </button>
           <button style={{ backgroundColor: 'var(--status-bg-critical)', color: 'var(--status-critical)', border: '1px solid var(--status-critical)', padding: '12px 24px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', letterSpacing: '1px', fontSize: '0.75rem' }}>ALERTA INSTITUCIONAL</button>
         </div>
       </div>

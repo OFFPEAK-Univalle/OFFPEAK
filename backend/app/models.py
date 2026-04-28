@@ -4,6 +4,7 @@ Tablas SQLAlchemy que reflejan el schema de Supabase (Sprint 1)
 """
 
 import uuid
+from uuid import UUID
 from datetime import datetime
 from typing import Optional
 
@@ -18,8 +19,9 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    JSON,
+    Uuid,
 )
-from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, relationship
 from sqlalchemy.sql import func
 
@@ -38,7 +40,7 @@ class User(Base):
     __tablename__ = "users"
 
     id: UUID = Column(
-        UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4,
     )
@@ -77,7 +79,7 @@ class Venue(Base):
     __tablename__ = "venues"
 
     id: UUID = Column(
-        UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4,
     )
@@ -111,12 +113,12 @@ class Forecast(Base):
     __tablename__ = "forecasts"
 
     id: UUID = Column(
-        UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4,
     )
     venue_id: UUID = Column(
-        UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         ForeignKey("venues.id", ondelete="CASCADE"),
         nullable=False,
     )
@@ -165,17 +167,17 @@ class CacheEntry(Base):
     __tablename__ = "cache_entries"
 
     id: UUID = Column(
-        UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4,
     )
     venue_id: UUID = Column(
-        UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         ForeignKey("venues.id", ondelete="CASCADE"),
         nullable=False,
     )
     endpoint_key: str = Column(Text, nullable=False)   # ej: "forecast_week"
-    respuesta_raw: dict = Column(JSONB, nullable=False) # JSON crudo de BestTime
+    respuesta_raw: dict = Column(JSON, nullable=False) # JSON crudo de BestTime
     expira_en: datetime = Column(DateTime(timezone=True), nullable=False)
     creado_en: datetime = Column(
         DateTime(timezone=True),
@@ -213,17 +215,17 @@ class Alert(Base):
     __tablename__ = "alerts"
 
     id: UUID = Column(
-        UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4,
     )
     venue_id: UUID = Column(
-        UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         ForeignKey("venues.id", ondelete="CASCADE"),
         nullable=False,
     )
     usuario_id: Optional[UUID] = Column(
-        UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
     )
