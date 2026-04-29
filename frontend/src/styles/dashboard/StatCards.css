@@ -1,0 +1,83 @@
+.kpi-section-title {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+  letter-spacing: 1px;
+}
+
+.stat-card {
+  padding: 20px;
+}
+
+.stat-card-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.stat-card-value-container {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.stat-card-trend {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.status-chips-container {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.status-chip {
+  padding: 8px 16px;
+  border-radius: 30px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  justify-content: center;
+}
+
+.status-chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-chip-text {
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+
+.status-chip.active {
+  border: 1px solid var(--status-optimal);
+}
+
+.status-chip.active .status-chip-dot {
+  background-color: var(--status-optimal);
+}
+
+.status-chip.managing {
+  border: 1px solid var(--status-moderate);
+}
+
+.status-chip.managing .status-chip-dot {
+  background-color: var(--status-moderate);
+}
+
+.status-chip.resolved {
+  border: 1px solid var(--border-light);
+}
+
+.status-chip.resolved .status-chip-dot {
+  background-color: var(--text-secondary);
+}
+
+.status-chip.resolved .status-chip-text {
+  color: var(--text-secondary);
+}

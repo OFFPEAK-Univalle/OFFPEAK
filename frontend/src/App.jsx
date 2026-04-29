@@ -210,7 +210,41 @@ function AppLayout({ children }) {
 
 function App() {
   const token = localStorage.getItem('token');
-  const isAuthenticated = !!token;
+  let isAuthenticated = false;
+  let isAuthorized = false;
+
+  if (token) {
+    isAuthenticated = true;
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      const payload = JSON.parse(jsonPayload);
+      if (payload.rol === 'autoridad' || payload.rol === 'admin') {
+        isAuthorized = true;
+      }
+    } catch(e) {
+      isAuthenticated = false;
+    }
+  }
+
+  // Si está logueado pero no es autoridad, mostramos error de permisos.
+  if (isAuthenticated && !isAuthorized) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', backgroundColor: 'var(--bg-main)' }}>
+        <h1 style={{ color: 'var(--status-critical)' }}>ACCESO DENEGADO</h1>
+        <p style={{ color: 'var(--text-secondary)' }}>No tienes los permisos necesarios (Rol: Autoridad) para acceder al Dashboard.</p>
+        <button 
+          onClick={() => { localStorage.removeItem('token'); window.location.reload(); }}
+          style={{ marginTop: '20px', padding: '10px 20px', backgroundColor: 'var(--accent-cyan)', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+        >
+          Volver al Login
+        </button>
+      </div>
+    );
+  }
 
   return (
     <Router>

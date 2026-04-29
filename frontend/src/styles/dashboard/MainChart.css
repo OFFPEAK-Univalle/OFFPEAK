@@ -1,0 +1,117 @@
+.main-chart-header {
+  padding: 24px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.main-chart-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.main-chart-title {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.main-chart-subtitle {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.status-badge {
+  background-color: var(--status-bg-optimal);
+  color: var(--status-optimal);
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: bold;
+}
+
+.chart-container-area {
+  height: 300px;
+  padding: 24px;
+}
+
+.main-chart-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border-light);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.main-chart-update-text {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.main-chart-report-link {
+  font-size: 0.75rem;
+  color: var(--accent-cyan);
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* Sidebar Alert Panel */
+.side-alert-panel {
+  border-left: 4px solid var(--status-critical);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+.side-alert-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--status-critical);
+  margin-bottom: 16px;
+}
+
+.side-alert-label {
+  font-size: 0.75rem;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.side-alert-title {
+  margin: 0 0 12px 0;
+  font-size: 1.25rem;
+}
+
+.side-alert-desc {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  flex: 1;
+}
+
+.side-alert-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.btn-side-alert {
+  padding: 12px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-side-alert-primary {
+  background-color: var(--status-critical);
+  color: #fff;
+  border: none;
+}
+
+.btn-side-alert-secondary {
+  background-color: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-light);
+}

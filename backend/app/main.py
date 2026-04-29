@@ -5,7 +5,7 @@ from sqlalchemy import text
 from contextlib import asynccontextmanager
 from .database import get_db, engine
 from .models import Base
-from .routers import venues, rerouting, admin
+from .routers import venues, rerouting, admin, auth
 from .services.tasks import start_cleaner_task, stop_cleaner_task
 
 @asynccontextmanager
@@ -35,6 +35,7 @@ app.add_middleware(
 app.include_router(venues.router, prefix="/api/v1/venues")
 app.include_router(rerouting.router, prefix="/api/v1/rerouting")
 app.include_router(admin.router, prefix="/api/v1/admin")
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 
 @app.get("/")
 async def root():

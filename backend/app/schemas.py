@@ -75,3 +75,29 @@ class CacheEntryResponse(CacheEntryBase):
     class Config:
         from_attributes = True
 
+# ─────────────────────────────
+# AUTH SCHEMAS
+# ─────────────────────────────
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    username: Optional[str] = None
+    rol: Optional[str] = None
+
+class UserBase(BaseModel):
+    nombre: str = Field(..., example="Agente Pérez")
+    email: str = Field(..., example="agente@offpeak.com")
+    rol: str = Field("ciudadano", example="autoridad")
+
+class UserCreate(UserBase):
+    password: str = Field(..., example="Secreta123!")
+
+class UserResponse(UserBase):
+    id: UUID4
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
