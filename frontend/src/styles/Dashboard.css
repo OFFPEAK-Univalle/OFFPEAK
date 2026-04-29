@@ -1,0 +1,63 @@
+/* Dashboard.css - Estilos Globales del Dashboard */
+
+.dashboard-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding-bottom: 32px;
+}
+
+@keyframes pulseBg {
+  0% { background-color: var(--status-critical); }
+  50% { background-color: #ff1a1a; }
+  100% { background-color: var(--status-critical); }
+}
+
+.banner-pulse {
+  animation: pulseBg 1.5s infinite;
+}
+
+.responsive-grid-2-1 {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 1024px) {
+  .responsive-grid-2-1 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.bottom-panels-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+@media (min-width: 1024px) {
+  .bottom-panels-grid {
+    grid-template-columns: 1fr 1.5fr 2fr;
+  }
+}
+
+.stat-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+/* Modal Overlay (Shared by any modal in dashboard) */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10000;
+  background-color: rgba(0,0,0,0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px);
+}

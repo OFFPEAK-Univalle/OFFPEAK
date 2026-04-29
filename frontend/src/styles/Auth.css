@@ -1,0 +1,294 @@
+/* src/styles/Auth.css */
+
+.auth-split-container {
+    display: flex;
+    min-height: 100vh;
+    width: 100vw;
+    background-color: var(--bg-main, #0a0a0a);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* ─────────────────────────────
+ * PANEL IZQUIERDO (Banner)
+ * ───────────────────────────── */
+.auth-banner {
+    flex: 1.2;
+    /* Toma un poco más de la mitad de la pantalla */
+    background: linear-gradient(145deg, var(--bg-sidebar, #141419) 0%, #050d14 100%);
+    border-right: 1px solid var(--border-light, rgba(255, 255, 255, 0.08));
+    padding: 60px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Decoraciones estilo "líneas" de tu imagen de referencia */
+.banner-decoration {
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    border: 1px solid rgba(0, 229, 255, 0.05);
+    border-radius: 50%;
+    top: -10%;
+    right: -20%;
+}
+
+.banner-decoration::before {
+    content: '';
+    position: absolute;
+    width: 800px;
+    height: 800px;
+    border: 1px solid rgba(0, 229, 255, 0.03);
+    border-radius: 50%;
+    top: -50px;
+    right: -100px;
+}
+
+.banner-content {
+    position: relative;
+    z-index: 10;
+    max-width: 500px;
+    margin: auto 0;
+}
+
+.banner-icon {
+    color: var(--accent-cyan, #00e5ff);
+    margin-bottom: 32px;
+}
+
+.banner-title {
+    font-size: 3.5rem;
+    font-weight: 800;
+    color: #ffffff;
+    line-height: 1.1;
+    margin: 0 0 24px 0;
+    letter-spacing: -1px;
+}
+
+.banner-description {
+    font-size: 1.1rem;
+    color: var(--text-secondary, #888);
+    line-height: 1.6;
+    margin: 0;
+}
+
+.banner-footer {
+    position: relative;
+    z-index: 10;
+    color: var(--text-muted, #555);
+    font-size: 0.85rem;
+}
+
+/* ─────────────────────────────
+ * PANEL DERECHO (Formulario)
+ * ───────────────────────────── */
+.auth-form-side {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    background-color: var(--bg-main, #0a0a0a);
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 420px;
+    /* Ya no necesita ser una tarjeta flotante, se integra al fondo */
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.auth-header {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.auth-title {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: bold;
+    color: #ffffff;
+    letter-spacing: -0.5px;
+}
+
+.auth-subtitle {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-secondary, #888);
+}
+
+/* Tabs */
+.auth-tabs {
+    display: flex;
+    background-color: var(--surface-secondary, rgba(255, 255, 255, 0.03));
+    border-radius: 8px;
+    padding: 4px;
+    border: 1px solid var(--border-light, rgba(255, 255, 255, 0.05));
+}
+
+.auth-tab-btn {
+    flex: 1;
+    padding: 12px;
+    border-radius: 6px;
+    border: none;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.auth-tab-btn.active {
+    background-color: var(--surface-primary, #1a1a24);
+    color: var(--text-primary, #fff);
+    border: 1px solid var(--border-light, rgba(255, 255, 255, 0.05));
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.auth-tab-btn.inactive {
+    background: transparent;
+    color: var(--text-secondary, #888);
+}
+
+/* Alertas */
+.auth-alert {
+    padding: 12px 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.85rem;
+    font-weight: bold;
+}
+
+.auth-alert.success {
+    background-color: rgba(0, 255, 128, 0.1);
+    border: 1px solid var(--status-optimal, #00ff80);
+    color: var(--status-optimal, #00ff80);
+}
+
+.auth-alert.error {
+    background-color: rgba(255, 50, 50, 0.1);
+    border: 1px solid var(--status-critical, #ff3232);
+    color: var(--status-critical, #ff3232);
+}
+
+/* Formulario (Inputs) */
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary, #888);
+    font-weight: 600;
+    letter-spacing: 1px;
+    margin-left: 2px;
+}
+
+.input-wrapper {
+    position: relative;
+}
+
+.input-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted, #555);
+}
+
+.auth-input {
+    width: 100%;
+    padding: 14px 14px 14px 44px;
+    border-radius: 8px;
+    background-color: var(--surface-secondary, rgba(255, 255, 255, 0.03));
+    border: 1px solid var(--border-light, rgba(255, 255, 255, 0.1));
+    color: #ffffff;
+    font-size: 0.9rem;
+    outline: none;
+    box-sizing: border-box;
+    transition: all 0.2s;
+}
+
+.auth-input:focus {
+    border-color: var(--accent-cyan, #00e5ff);
+    background-color: var(--surface-primary, rgba(20, 20, 25, 0.9));
+}
+
+.auth-input::placeholder {
+    color: var(--text-muted, #555);
+}
+
+/* Botón y Rol */
+.role-display {
+    display: flex;
+    align-items: center;
+    background-color: rgba(0, 229, 255, 0.05);
+    border: 1px solid rgba(0, 229, 255, 0.2);
+    padding: 12px 14px;
+    border-radius: 8px;
+    gap: 10px;
+}
+
+.role-text {
+    color: var(--accent-cyan, #00e5ff);
+    font-size: 0.85rem;
+    font-weight: bold;
+}
+
+.submit-btn {
+    margin-top: 8px;
+    width: 100%;
+    padding: 14px;
+    border-radius: 8px;
+    background-color: var(--accent-cyan, #00e5ff);
+    color: #000;
+    border: none;
+    font-size: 0.85rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: opacity 0.2s, transform 0.1s;
+}
+
+.submit-btn:hover:not(:disabled) {
+    opacity: 0.9;
+}
+
+.submit-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+/* Responsivo: Si la pantalla es pequeña, ocultar el banner izquierdo */
+@media (max-width: 900px) {
+    .auth-split-container {
+        flex-direction: column;
+    }
+
+    .auth-banner {
+        display: none;
+    }
+
+    .auth-form-side {
+        padding: 20px;
+    }
+}

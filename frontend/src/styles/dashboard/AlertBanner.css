@@ -1,0 +1,73 @@
+.alert-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  color: white;
+}
+
+.alert-banner.critical {
+  background-color: var(--status-critical);
+}
+
+.alert-banner.managing {
+  background-color: var(--status-moderate);
+}
+
+.alert-banner-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.alert-banner-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: bold;
+}
+
+.alert-banner-subtitle {
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.alert-banner-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-banner-action {
+  border: none;
+  padding: 10px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: opacity 0.2s;
+}
+
+.btn-banner-action:hover {
+  opacity: 0.9;
+}
+
+.btn-banner-secondary {
+  background-color: rgba(255,255,255,0.2);
+  color: white;
+}
+
+.btn-banner-primary {
+  background-color: white;
+}
+
+.btn-banner-primary.critical {
+  color: var(--status-critical);
+}
+
+.btn-banner-primary.managing {
+  color: var(--status-moderate);
+}
