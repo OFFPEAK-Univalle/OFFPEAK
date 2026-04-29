@@ -91,6 +91,7 @@ class Venue(Base):
     longitud: float = Column(Float, nullable=False)
     ciudad: str = Column(Text, nullable=False, default="Cali")
     activo: bool = Column(Boolean, nullable=False, default=True)
+    es_techado: bool = Column(Boolean, nullable=False, default=False)
     created_at: datetime = Column(
         DateTime(timezone=True),
         nullable=False,

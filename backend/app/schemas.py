@@ -13,6 +13,7 @@ class VenueBase(BaseModel):
     longitud: Optional[float] = Field(None, example=-76.5262)
     ciudad: str = Field("Cali", example="Cali")
     activo: bool = Field(True, example=True)
+    es_techado: bool = Field(False, example=True)
 
 class VenueCreate(VenueBase):
     besttime_venue_id: Optional[str] = Field(None, description="ID del venue en BestTime")
@@ -26,6 +27,7 @@ class VenueUpdate(BaseModel):
     longitud: Optional[float] = None
     ciudad: Optional[str] = None
     activo: Optional[bool] = None
+    es_techado: Optional[bool] = None
     besttime_venue_id: Optional[str] = Field(None, description="ID del venue en BestTime")
 
 class VenueResponse(VenueBase):

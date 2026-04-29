@@ -8,6 +8,7 @@ from sqlalchemy.future import select
 
 from app.models import Venue
 from app.services.besttime import obtener_forecast_venue
+from app.services.weather import obtener_clima_actual
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +54,15 @@ async def obtener_alternativas_desvio(
         # Si el usuario va a un banco, buscar otros bancos, etc.
         query = query.where(Venue.categoria == categoria_objetivo)
         
+    # Consultar el clima actual para ajustar recomendaciones
+    clima = await obtener_clima_actual("Cali")
+    if clima == "lluvia":
+        logger.info("Lluvia detectada en Cali. Filtrando solo lugares techados.")
+        query = query.where(Venue.es_techado == True)
+        razon_clima = " (Ajustado por lluvia: solo sitios techados)"
+    else:
+        razon_clima = ""
+        
     result = await db.execute(query)
     venues = result.scalars().all()
     
@@ -88,25 +98,25 @@ async def obtener_alternativas_desvio(
                     indice_afluencia = f["indice_afluencia"]
                     break
             
-            # Solo recomendamos si la afluencia es favorable (evitamos "alto")
-            # Si es desconocido, podríamos decidir incluirlo o no. Lo incluimos con penalidad.
-            if nivel_actual in ["bajo", "medio", "desconocido"]:
-                alternativas.append({
-                    "venue_id": str(venue.id),
-                    "nombre": venue.nombre,
-                    "direccion": venue.direccion,
-                    "latitud": venue.latitud,
-                    "longitud": venue.longitud,
-                    "distancia_metros": round(distancia, 2),
-                    "nivel_afluencia": nivel_actual,
-                    "indice_afluencia": indice_afluencia,
-                    "categoria": venue.categoria,
-                    "razon_desvio": f"Afluencia {nivel_actual.upper()} a {round(distancia, 0)}m de tu ubicación."
-                })
-                
         except Exception as e:
             logger.warning(f"No se pudo obtener forecast para {venue.nombre}: {str(e)}")
-            continue
+            nivel_actual = "desconocido"
+            indice_afluencia = -1
+            
+        # Solo recomendamos si la afluencia es favorable (evitamos "alto")
+        if nivel_actual in ["bajo", "medio", "desconocido"]:
+            alternativas.append({
+                "venue_id": str(venue.id),
+                "nombre": venue.nombre,
+                "direccion": venue.direccion,
+                "latitud": venue.latitud,
+                "longitud": venue.longitud,
+                "distancia_metros": round(distancia, 2),
+                "nivel_afluencia": nivel_actual,
+                "indice_afluencia": indice_afluencia,
+                "categoria": venue.categoria,
+                "razon_desvio": f"Afluencia {nivel_actual.upper()} a {round(distancia, 0)}m de tu ubicación.{razon_clima}"
+            })
             
     # 3. Función heurística para ordenar las mejores alternativas
     # Priorizamos: 1. Afluencia Baja, 2. Menor Distancia.

@@ -18,11 +18,29 @@ import DashboardFooter from '../components/dashboard/DashboardFooter';
 import { mainChartData, trendData } from '../components/dashboard/mockData';
 
 export default function DashboardPage() {
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8888/api/v1';
+  
   // Estado para la Simulación de Aforo
   const [currentAfluencia, setCurrentAfluencia] = useState(65);
   const [alertStatus, setAlertStatus] = useState('normal'); // 'normal', 'critical', 'managing'
   const [isMuted, setIsMuted] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [venues, setVenues] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Cargar Venues Reales
+  useEffect(() => {
+    fetch(`${API_URL}/venues/`)
+      .then(res => res.json())
+      .then(data => {
+        setVenues(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Error cargando venues:", err);
+        setLoading(false);
+      });
+  }, []);
 
   // Acciones operativas
   const [protocolActions, setProtocolActions] = useState({
@@ -107,7 +125,35 @@ export default function DashboardPage() {
         setAlertStatus={setAlertStatus}
       />
 
-      <StatCards />
+      <StatCards venueCount={venues.length} />
+
+      {/* Sección de Venues Reales */}
+      <div className="glass-panel" style={{ padding: '20px', marginBottom: '32px' }}>
+        <h3 className="kpi-section-title">LUGARES MONITOREADOS (REAL-TIME DB)</h3>
+        {loading ? (
+          <p>Cargando datos de la base de datos...</p>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
+            {venues.map(v => (
+              <div key={v.id} style={{ padding: '12px', border: '1px solid var(--border-light)', borderRadius: '8px', backgroundColor: 'rgba(255,255,255,0.03)' }}>
+                <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{v.nombre}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{v.ciudad}</div>
+                <div style={{ marginTop: '8px' }}>
+                  <span style={{ 
+                    fontSize: '0.65rem', 
+                    padding: '2px 6px', 
+                    borderRadius: '4px', 
+                    backgroundColor: v.es_techado ? 'rgba(0, 255, 255, 0.1)' : 'rgba(255, 165, 0, 0.1)',
+                    color: v.es_techado ? 'var(--accent-cyan)' : 'orange'
+                  }}>
+                    {v.es_techado ? 'TECHADO' : 'AIRE LIBRE'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       <MainChart data={mainChartData} />
 
