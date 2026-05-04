@@ -1,5 +1,5 @@
 from pydantic import BaseModel, UUID4, Field
-from typing import Optional, List
+from typing import Optional, List, Any
 from datetime import datetime
 
 # ─────────────────────────────
@@ -37,7 +37,20 @@ class VenueResponse(VenueBase):
         from_attributes = True
 
 # ─────────────────────────────
-# FORECAST SCHEMAS
+# SCHEMAS INBOUND (Lo que viene de BestTime)
+# ─────────────────────────────
+class BestTimeVenueInfo(BaseModel):
+    """Schema para atrapar y validar los datos crudos que manda BestTime, si decides usar Pydantic en lugar de .get() en tu service."""
+    venue_id: str
+    venue_name: str
+    venue_address: Optional[str] = None
+    venue_lat: float
+    venue_lng: float
+    venue_type: Optional[str] = None
+    venue_timezone: Optional[str] = None
+
+# ─────────────────────────────
+# FORECAST SCHEMAS (Para DB)
 # ─────────────────────────────
 class ForecastBase(BaseModel):
     dia_semana: int = Field(..., description="0=Lunes, 6=Domingo")
@@ -54,10 +67,27 @@ class ForecastResponse(ForecastBase):
     class Config:
         from_attributes = True
 
-class BestTimeForecastData(BaseModel):
-    """Estructura de la respuesta enriquecida de BestTime."""
-    venue_info: VenueResponse
-    forecasts: List[ForecastResponse]
+# ─────────────────────────────
+# ENDPOINT RESPONSE (Para el Frontend)
+# ─────────────────────────────
+class ForecastSlot(BaseModel):
+    """Representa un bloque de hora devuelto por tu función _parsear_forecasts"""
+    dia_semana: int
+    hora: int
+    indice_afluencia: int
+    nivel: str
+
+class OffPeakForecastResponse(BaseModel):
+    """Estructura exacta que coincide con 'respuesta_final' de tu service.py"""
+    venue_id: str
+    venue_nombre: str
+    besttime_venue_id: Optional[str] = None
+    venue_direccion: Optional[str] = None
+    venue_forecasted: bool
+    aviso: Optional[str] = None
+    consultado_en: str
+    total_slots: int
+    forecasts: List[ForecastSlot]
 
 # ─────────────────────────────
 # CACHE SCHEMAS
