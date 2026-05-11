@@ -13,7 +13,6 @@ app = FastAPI(
     title="OffPeak API", 
     description="Sistema de gestión de afluencia para Smart City - Cali",
     version="2.0.0",
-    lifespan=lifespan
 )
 
 # Configuración de CORS optimizada
