@@ -36,6 +36,9 @@ class Base(DeclarativeBase):
 # ─────────────────────────────
 # 1. USERS
 # ─────────────────────────────
+# ─────────────────────────────
+# 1. USERS
+# ─────────────────────────────
 class User(Base):
     __tablename__ = "users"
 
@@ -52,6 +55,7 @@ class User(Base):
         nullable=False,
         default="ciudadano",
     )
+    is_active: bool = Column(Boolean, default=True)
     created_at: datetime = Column(
         DateTime(timezone=True),
         nullable=False,
@@ -69,8 +73,7 @@ class User(Base):
     )
 
     def __repr__(self) -> str:
-        return f"<User id={self.id} email={self.email} rol={self.rol}>"
-
+        return f"<User id={self.id} email={self.email} rol={self.rol} active={self.is_active}>"
 
 # ─────────────────────────────
 # 2. VENUES
