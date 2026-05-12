@@ -24,10 +24,9 @@ python-dotenv>=1.0.1
 aiosqlite>=0.20.0
 
 # Seguridad y Autenticación
-passlib[bcrypt]>=1.7.4
+bcrypt>=4.1.0
 python-jose[cryptography]>=3.3.0
-bcrypt>=4.1.0            # Implementación nativa para passlib
-python-multipart>=0.0.9  # Necesario para OAuth2PasswordRequestForm
+python-multipart>=0.0.9
 
 # Utilidades de sistema
-greenlet>=3.0.3          # Requerido por SQLAlchemy para soporte asíncrono
+greenlet>=3.0.3
