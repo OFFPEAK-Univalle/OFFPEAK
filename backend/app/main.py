@@ -18,9 +18,7 @@ app = FastAPI(
 # Configuración de CORS optimizada
 app.add_middleware(
     CORSMiddleware,
-    # Reemplaza el "*" por la URL de tu frontend cuando la tengas
-    # allow_origins=["https://offpeak-frontend.onrender.com"],
-    allow_origins=["*"], 
+    allow_origins=["https://offpeak-seven.vercel.app"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
