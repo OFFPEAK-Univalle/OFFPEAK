@@ -120,9 +120,11 @@ class UserBase(BaseModel):
     nombre: str = Field(..., example="Agente Pérez")
     email: str = Field(..., example="agente@offpeak.com")
     rol: str = Field("ciudadano", example="autoridad")
+    is_active: bool = Field(True, example=True)
 
 class UserCreate(UserBase):
     password: str = Field(..., example="Secreta123!")
+    is_active: bool = Field(True, example=True)
 
 class UserResponse(UserBase):
     id: UUID4
