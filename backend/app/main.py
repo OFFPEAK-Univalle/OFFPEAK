@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 
 from .database import get_db, engine
 from .models import Base
-from .routers import venues, rerouting, admin, auth
+from .routers import venues, rerouting, admin, auth, heatmap
 from .services.tasks import start_cleaner_task, stop_cleaner_task
 
 app = FastAPI(
@@ -29,6 +29,7 @@ app.include_router(venues.router, prefix="/api/v1/venues", tags=["Venues"])
 app.include_router(rerouting.router, prefix="/api/v1/rerouting", tags=["Inteligencia de Rutas"])
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["Administración"])
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Autenticación"])
+app.include_router(heatmap.router, prefix="/api/v1/heatmap", tags=["Heatmap"])
 
 # Root endpoint con soporte para HEAD (Para el Health Check de Render)
 @app.api_route("/", methods=["GET", "HEAD"])
