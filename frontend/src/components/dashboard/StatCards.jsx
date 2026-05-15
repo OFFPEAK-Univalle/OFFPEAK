@@ -1,7 +1,7 @@
 import React from 'react';
 import '../../styles/dashboard/StatCards.css';
 
-export default function StatCards() {
+export default function StatCards({ venueCount = 0 }) {
   return (
     <div>
       <h3 className="kpi-section-title">KPI STAT CHIPS & INDICADORS</h3>
@@ -18,10 +18,10 @@ export default function StatCards() {
 
         {/* Card: Zonas Críticas */}
         <div className="glass-panel stat-card">
-          <span className="stat-card-label">ZONAS CRÍTICAS</span>
+          <span className="stat-card-label">LUGARES MONITOREADOS</span>
           <div className="stat-card-value-container">
-            <span className="stat-value text-cyber">04</span>
-            <span className="stat-card-trend" style={{ color: 'var(--status-critical)' }}>+2</span>
+            <span className="stat-value text-cyber">{String(venueCount).padStart(2, '0')}</span>
+            <span className="stat-card-trend" style={{ color: 'var(--accent-cyan)' }}>DB REAL</span>
           </div>
         </div>
 

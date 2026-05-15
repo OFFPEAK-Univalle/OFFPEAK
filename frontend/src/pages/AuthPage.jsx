@@ -15,7 +15,7 @@ export default function AuthPage() {
     rol: 'autoridad'
   });
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001/api/v1';
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });

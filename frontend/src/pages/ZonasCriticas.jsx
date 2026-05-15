@@ -27,7 +27,7 @@ export default function ZonasCriticas() {
     setLoadingDesvios(true);
     try {
       // Coordenadas origen (Bulevar del Rio simulado)
-      const response = await fetch('http://localhost:8000/api/v1/rerouting/recommend', {
+      const response = await fetch('http://localhost:8001/api/v1/rerouting/recommend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
