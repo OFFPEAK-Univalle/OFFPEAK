@@ -1,5 +1,9 @@
 import math
-from typing import List, Optional
+import asyncio
+import httpx
+import random
+import os
+from typing import List, Optional, Dict, Any
 from datetime import datetime, timezone, timedelta
 import logging
 
@@ -10,6 +14,41 @@ from app.models import Venue
 from app.services.besttime import obtener_forecast_venue
 
 logger = logging.getLogger(__name__)
+
+async def obtener_ruta_osrm(lat1: float, lon1: float, lat2: float, lon2: float) -> Optional[Dict[str, Any]]:
+    """
+    Consulta la API gratuita de OSRM para obtener la distancia de conducción y el tiempo estimado.
+    """
+    # OSRM espera longitud,latitud
+    url = f"http://router.project-osrm.org/route/v1/driving/{lon1},{lat1};{lon2},{lat2}?overview=full&geometries=geojson"
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.get(url)
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("routes") and len(data["routes"]) > 0:
+                    route = data["routes"][0]
+                    return {
+                        "distancia_metros": route["distance"],
+                        "duracion_segundos": route["duration"],
+                        "geometria": route["geometry"] # Útil para que Leaflet dibuje la ruta
+                    }
+    except Exception as e:
+        logger.warning(f"Error consultando OSRM: {e}")
+    return None
+
+async def obtener_clima(lat: float, lon: float) -> str:
+    """Simulación de Clima (Reemplazable por OpenWeatherMap)"""
+    # Usar clima simulado para pruebas locales hasta tener API Key
+    climas = ["Despejado", "Nublado", "Lluvia Ligera", "Lluvia Fuerte"]
+    pesos = [0.6, 0.25, 0.1, 0.05]
+    return random.choices(climas, weights=pesos, k=1)[0]
+
+async def obtener_incidencias(lat: float, lon: float) -> str:
+    """Simulación de Incidencias de Tráfico (Reemplazable por TomTom API)"""
+    incidencias = ["Ninguna", "Tráfico Pesado", "Vía Cerrada Parcialmente", "Accidente Menor"]
+    pesos = [0.75, 0.15, 0.05, 0.05]
+    return random.choices(incidencias, weights=pesos, k=1)[0]
 
 def calcular_distancia(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """
@@ -64,65 +103,114 @@ async def obtener_alternativas_desvio(
     dia_semana_actual = ahora.weekday()  # 0=Lunes, 6=Domingo
     hora_actual = ahora.hour
 
-    # 2. Filtrar por distancia y nivel de congestión
+    # 2. Filtrar por distancia lineal primero (para no saturar OSRM)
+    candidatos = []
     for venue in venues:
-        distancia = calcular_distancia(lat_origen, lon_origen, venue.latitud, venue.longitud)
-        
-        # Descartamos los que estén demasiado lejos
-        if distancia > radio_metros:
-            continue
+        distancia_lineal = calcular_distancia(lat_origen, lon_origen, venue.latitud, venue.longitud)
+        if distancia_lineal <= radio_metros:
+            candidatos.append((venue, distancia_lineal))
             
+    # Ordenar por cercanía lineal y tomar solo los mejores N para hacer peticiones API (ej. top 5)
+    candidatos.sort(key=lambda x: x[1])
+    candidatos = candidatos[:5]
+    
+    # 3. Consultar datos en paralelo (OSRM, BestTime, Clima, Incidencias)
+    for venue, dist_lineal in candidatos:
         try:
-            # Consultamos el pronóstico y afluencia usando el servicio existente
-            # que implementa caché para evitar saturar la API de BestTime
-            data = await obtener_forecast_venue(db, str(venue.id))
+            # Peticiones concurrentes
+            data_besttime, ruta_osrm, clima, incidencia = await asyncio.gather(
+                obtener_forecast_venue(db, str(venue.id)),
+                obtener_ruta_osrm(lat_origen, lon_origen, venue.latitud, venue.longitud),
+                obtener_clima(venue.latitud, venue.longitud),
+                obtener_incidencias(venue.latitud, venue.longitud),
+                return_exceptions=True
+            )
             
+            # Verificar si hubo excepciones en gather
+            if isinstance(data_besttime, Exception): data_besttime = {}
+            if isinstance(ruta_osrm, Exception): ruta_osrm = None
+            if isinstance(clima, Exception): clima = "Despejado"
+            if isinstance(incidencia, Exception): incidencia = "Ninguna"
+
+            # Parsear Afluencia
             nivel_actual = "desconocido"
             indice_afluencia = -1
-            
-            # Buscar el pronóstico correspondiente a la hora actual
-            forecasts = data.get("forecasts", [])
+            forecasts = data_besttime.get("forecasts", []) if isinstance(data_besttime, dict) else []
             for f in forecasts:
                 if f["dia_semana"] == dia_semana_actual and f["hora"] == hora_actual:
                     nivel_actual = f["nivel"]
                     indice_afluencia = f["indice_afluencia"]
                     break
             
-            # Solo recomendamos si la afluencia es favorable (evitamos "alto")
-            # Si es desconocido, podríamos decidir incluirlo o no. Lo incluimos con penalidad.
-            if nivel_actual in ["bajo", "medio", "desconocido"]:
-                alternativas.append({
-                    "venue_id": str(venue.id),
-                    "nombre": venue.nombre,
-                    "direccion": venue.direccion,
-                    "latitud": venue.latitud,
-                    "longitud": venue.longitud,
-                    "distancia_metros": round(distancia, 2),
-                    "nivel_afluencia": nivel_actual,
-                    "indice_afluencia": indice_afluencia,
-                    "categoria": venue.categoria,
-                    "razon_desvio": f"Afluencia {nivel_actual.upper()} a {round(distancia, 0)}m de tu ubicación."
-                })
+            # Determinar Distancia y Tiempo Final
+            if ruta_osrm:
+                dist_final = ruta_osrm["distancia_metros"]
+                tiempo_segundos = ruta_osrm["duracion_segundos"]
+                geometria_ruta = ruta_osrm["geometria"]
+            else:
+                # Fallback a Haversine si OSRM falla
+                dist_final = dist_lineal
+                tiempo_segundos = (dist_final / 5.0) # asume 5m/s velocidad promedio
+                geometria_ruta = None
+
+            # Calculo de Heurística (Smart Routing Score)
+            # Menor score es mejor.
+            # Peso base: tiempo de viaje (1 punto por segundo)
+            score = tiempo_segundos
+            
+            # Penalidad por Afluencia en destino
+            if nivel_actual == "medio":
+                score += 300 # Equivalente a 5 minutos extra
+            elif nivel_actual == "alto":
+                score += 900 # Equivalente a 15 minutos extra
+            elif nivel_actual == "desconocido":
+                score += 400
+                
+            # Penalidad por Clima
+            if clima == "Lluvia Ligera":
+                score *= 1.2 # Aumenta 20%
+            elif clima == "Lluvia Fuerte":
+                score *= 1.5 # Aumenta 50%
+                
+            # Penalidad por Incidencias
+            if incidencia == "Tráfico Pesado":
+                score *= 1.3
+            elif incidencia == "Vía Cerrada Parcialmente" or incidencia == "Accidente Menor":
+                score *= 1.6
+            
+            # Si el nivel es muy alto y no es la única opción, podríamos descartarla, pero la heurística lo manda al final
+            
+            minutos_viaje = round(tiempo_segundos / 60)
+            
+            # Armar la justificación
+            razon = f"Afluencia {nivel_actual.upper()}, {minutos_viaje} min de viaje."
+            if clima != "Despejado": razon += f" Clima: {clima}."
+            if incidencia != "Ninguna": razon += f" Tráfico: {incidencia}."
+
+            alternativas.append({
+                "venue_id": str(venue.id),
+                "nombre": venue.nombre,
+                "direccion": venue.direccion,
+                "latitud": venue.latitud,
+                "longitud": venue.longitud,
+                "distancia_metros": round(dist_final, 2),
+                "tiempo_viaje_minutos": minutos_viaje,
+                "nivel_afluencia": nivel_actual,
+                "indice_afluencia": indice_afluencia,
+                "categoria": venue.categoria,
+                "razon_desvio": razon,
+                "clima_actual": clima,
+                "incidencias_viales": incidencia,
+                "score": score,
+                "geometria_ruta": geometria_ruta
+            })
                 
         except Exception as e:
-            logger.warning(f"No se pudo obtener forecast para {venue.nombre}: {str(e)}")
+            logger.warning(f"Error procesando alternativa {venue.nombre}: {str(e)}")
             continue
             
-    # 3. Función heurística para ordenar las mejores alternativas
-    # Priorizamos: 1. Afluencia Baja, 2. Menor Distancia.
-    def score_alternativa(alt):
-        # Base es la distancia
-        score = alt["distancia_metros"]
-        
-        # Penalizamos fuertemente niveles más altos
-        if alt["nivel_afluencia"] == "medio":
-            score += 1500  # Equivalente a preferir uno 'bajo' aunque esté 1.5km más lejos
-        elif alt["nivel_afluencia"] == "desconocido":
-            score += 3000
-            
-        return score
-        
-    alternativas.sort(key=score_alternativa)
+    # Ordenar por el mejor score de movilidad integral
+    alternativas.sort(key=lambda x: x["score"])
     
     # Retornamos el top N de recomendaciones
     return alternativas[:limite]
