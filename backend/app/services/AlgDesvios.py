@@ -114,10 +114,10 @@ async def obtener_alternativas_desvio(
     candidatos.sort(key=lambda x: x[1])
     candidatos = candidatos[:5]
     
-    # 3. Consultar datos en paralelo (OSRM, BestTime, Clima, Incidencias)
-    for venue, dist_lineal in candidatos:
+    # 3. Evaluar todos los candidatos en paralelo (OSRM, BestTime, Clima, Incidencias)
+    async def evaluar_candidato(venue, dist_lineal):
         try:
-            # Peticiones concurrentes
+            # Peticiones concurrentes para un solo candidato
             data_besttime, ruta_osrm, clima, incidencia = await asyncio.gather(
                 obtener_forecast_venue(db, str(venue.id)),
                 obtener_ruta_osrm(lat_origen, lon_origen, venue.latitud, venue.longitud),
@@ -178,8 +178,6 @@ async def obtener_alternativas_desvio(
             elif incidencia == "Vía Cerrada Parcialmente" or incidencia == "Accidente Menor":
                 score *= 1.6
             
-            # Si el nivel es muy alto y no es la única opción, podríamos descartarla, pero la heurística lo manda al final
-            
             minutos_viaje = round(tiempo_segundos / 60)
             
             # Armar la justificación
@@ -187,7 +185,7 @@ async def obtener_alternativas_desvio(
             if clima != "Despejado": razon += f" Clima: {clima}."
             if incidencia != "Ninguna": razon += f" Tráfico: {incidencia}."
 
-            alternativas.append({
+            return {
                 "venue_id": str(venue.id),
                 "nombre": venue.nombre,
                 "direccion": venue.direccion,
@@ -203,11 +201,18 @@ async def obtener_alternativas_desvio(
                 "incidencias_viales": incidencia,
                 "score": score,
                 "geometria_ruta": geometria_ruta
-            })
+            }
                 
         except Exception as e:
             logger.warning(f"Error procesando alternativa {venue.nombre}: {str(e)}")
-            continue
+            return None
+
+    # Procesar todos los candidatos en paralelo para máxima velocidad
+    tareas = [evaluar_candidato(venue, dist_lineal) for venue, dist_lineal in candidatos]
+    resultados = await asyncio.gather(*tareas)
+    
+    # Filtrar resultados válidos
+    alternativas = [r for r in resultados if r is not None]
             
     # Ordenar por el mejor score de movilidad integral
     alternativas.sort(key=lambda x: x["score"])
