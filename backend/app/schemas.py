@@ -13,6 +13,7 @@ class VenueBase(BaseModel):
     longitud: Optional[float] = Field(None, example=-76.5262)
     ciudad: str = Field("Cali", example="Cali")
     activo: bool = Field(True, example=True)
+    es_techado: bool = Field(False, example=True)
 
 class VenueCreate(VenueBase):
     besttime_venue_id: Optional[str] = Field(None, description="ID del venue en BestTime")
@@ -26,6 +27,7 @@ class VenueUpdate(BaseModel):
     longitud: Optional[float] = None
     ciudad: Optional[str] = None
     activo: Optional[bool] = None
+    es_techado: Optional[bool] = None
     besttime_venue_id: Optional[str] = Field(None, description="ID del venue en BestTime")
 
 class VenueResponse(VenueBase):
@@ -66,6 +68,11 @@ class ForecastResponse(ForecastBase):
 
     class Config:
         from_attributes = True
+
+class BestTimeForecastData(BaseModel):
+    """Estructura de la respuesta enriquecida de BestTime."""
+    venue_info: VenueResponse
+    forecasts: List[ForecastResponse]
 
 # ─────────────────────────────
 # ENDPOINT RESPONSE (Para el Frontend)
@@ -130,6 +137,26 @@ class UserResponse(UserBase):
     id: UUID4
     is_active: bool
     created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# ─────────────────────────────
+# ALERT SCHEMAS
+# ─────────────────────────────
+class AlertBase(BaseModel):
+    venue_id: UUID4
+    tipo: str = Field(..., description="congestion_alta, congestion_media, o normalizado")
+    mensaje: str = Field(..., description="Mensaje de la alerta")
+
+class AlertCreate(AlertBase):
+    pass
+
+class AlertResponse(AlertBase):
+    id: UUID4
+    usuario_id: Optional[UUID4] = None
+    leida: bool
+    generada_en: datetime
 
     class Config:
         from_attributes = True

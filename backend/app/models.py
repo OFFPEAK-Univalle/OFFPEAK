@@ -21,6 +21,7 @@ from sqlalchemy import (
     UniqueConstraint,
     JSON,
     Uuid,
+    Index,
 )
 from sqlalchemy.orm import DeclarativeBase, relationship
 from sqlalchemy.sql import func
@@ -94,10 +95,16 @@ class Venue(Base):
     longitud: float = Column(Float, nullable=False)
     ciudad: str = Column(Text, nullable=False, default="Cali")
     activo: bool = Column(Boolean, nullable=False, default=True)
+    es_techado: bool = Column(Boolean, nullable=False, default=False)
     created_at: datetime = Column(
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),
+    )
+
+    __table_args__ = (
+        Index("idx_venues_nombre", "nombre"),
+        Index("idx_venues_ciudad", "ciudad"),
     )
 
     # Relaciones
@@ -154,6 +161,7 @@ class Forecast(Base):
             "venue_id", "dia_semana", "hora", "periodo_inicio",
             name="uq_forecasts_slot",
         ),
+        Index("idx_forecasts_venue", "venue_id", "dia_semana", "hora"),
     )
 
     def __repr__(self) -> str:
@@ -196,6 +204,8 @@ class CacheEntry(Base):
             "venue_id", "endpoint_key",
             name="uq_cache_venue_endpoint",
         ),
+        Index("idx_cache_venue", "venue_id", "endpoint_key"),
+        Index("idx_cache_expira", "expira_en"),
     )
 
     @property
@@ -250,6 +260,8 @@ class Alert(Base):
             "tipo IN ('congestion_alta', 'congestion_media', 'normalizado')",
             name="ck_alerts_tipo",
         ),
+        Index("idx_alerts_venue", "venue_id"),
+        Index("idx_alerts_usuario", "usuario_id", "leida"),
     )
 
     def __repr__(self) -> str:

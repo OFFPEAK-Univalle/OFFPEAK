@@ -8,7 +8,7 @@ export default function AdminDashboard() {
 
   const fetchStatus = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/v1/admin/cleaner/status');
+      const response = await fetch('http://localhost:8001/api/v1/admin/cleaner/status');
       if (response.ok) {
         const data = await response.json();
         setCleanerStatus(data);
@@ -22,7 +22,7 @@ export default function AdminDashboard() {
     setLoading(true);
     setMessage(null);
     try {
-      const response = await fetch('http://localhost:8000/api/v1/admin/cleaner/force-run', {
+      const response = await fetch('http://localhost:8001/api/v1/admin/cleaner/force-run', {
         method: 'POST'
       });
       if (response.ok) {
