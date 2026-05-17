@@ -115,19 +115,27 @@ async def obtener_alternativas_desvio(
     candidatos = candidatos[:5]
     
     # 3. Evaluar todos los candidatos en paralelo (OSRM, BestTime, Clima, Incidencias)
+    # Primero: Obtener los forecasts secuencialmente para evitar conflictos de SQLAlchemy (AsyncSession)
+    forecasts_dict = {}
+    for venue, dist_lineal in candidatos:
+        try:
+            forecasts_dict[venue.id] = await obtener_forecast_venue(db, str(venue.id))
+        except Exception:
+            forecasts_dict[venue.id] = {}
+
     async def evaluar_candidato(venue, dist_lineal):
         try:
-            # Peticiones concurrentes para un solo candidato
-            data_besttime, ruta_osrm, clima, incidencia = await asyncio.gather(
-                obtener_forecast_venue(db, str(venue.id)),
+            # Peticiones concurrentes externas (HTTP)
+            ruta_osrm, clima, incidencia = await asyncio.gather(
                 obtener_ruta_osrm(lat_origen, lon_origen, venue.latitud, venue.longitud),
                 obtener_clima(venue.latitud, venue.longitud),
                 obtener_incidencias(venue.latitud, venue.longitud),
                 return_exceptions=True
             )
             
+            data_besttime = forecasts_dict.get(venue.id, {})
+            
             # Verificar si hubo excepciones en gather
-            if isinstance(data_besttime, Exception): data_besttime = {}
             if isinstance(ruta_osrm, Exception): ruta_osrm = None
             if isinstance(clima, Exception): clima = "Despejado"
             if isinstance(incidencia, Exception): incidencia = "Ninguna"
