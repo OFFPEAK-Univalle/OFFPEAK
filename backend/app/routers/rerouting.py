@@ -1,12 +1,36 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
+import time
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.services.AlgDesvios import obtener_alternativas_desvio
 
 router = APIRouter(tags=["Rerouting"])
+
+# Simple in-memory rate limiter for massive events
+_rate_limit_cache = {}
+RATE_LIMIT_WINDOW = 60 # seconds
+MAX_REQUESTS_PER_WINDOW = 15
+
+def check_rate_limit(request: Request):
+    client_ip = request.client.host if request.client else "unknown"
+    current_time = time.time()
+    
+    if client_ip not in _rate_limit_cache:
+        _rate_limit_cache[client_ip] = []
+        
+    # Limpiar requests antiguos
+    _rate_limit_cache[client_ip] = [t for t in _rate_limit_cache[client_ip] if current_time - t < RATE_LIMIT_WINDOW]
+    
+    if len(_rate_limit_cache[client_ip]) >= MAX_REQUESTS_PER_WINDOW:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS, 
+            detail="Too many requests. Sistema en modo prevención de saturación."
+        )
+        
+    _rate_limit_cache[client_ip].append(current_time)
 
 class ReroutingRequest(BaseModel):
     latitud: float = Field(..., description="Latitud actual del usuario")
@@ -32,7 +56,7 @@ class AlternativaResponse(BaseModel):
     score: float
     geometria_ruta: Optional[Dict[str, Any]] = None
 
-@router.post("/recommend", response_model=List[AlternativaResponse])
+@router.post("/recommend", response_model=List[AlternativaResponse], dependencies=[Depends(check_rate_limit)])
 async def recommend_detours(req: ReroutingRequest, db: AsyncSession = Depends(get_db)):
     """
     Calcula y devuelve alternativas de desvío basadas en la ubicación actual, 

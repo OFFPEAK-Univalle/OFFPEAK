@@ -6,6 +6,7 @@ import os
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timezone, timedelta
 import logging
+import time
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -14,6 +15,23 @@ from app.models import Venue
 from app.services.besttime import obtener_forecast_venue
 
 logger = logging.getLogger(__name__)
+
+# Caché en memoria para agrupamiento geoespacial (Sector Caching)
+# Mitiga picos de solicitudes en eventos masivos (ej. salida del estadio)
+_sector_cache = {}
+CACHE_TTL_SECONDS = 300  # 5 minutos
+
+def _get_from_sector_cache(key: str) -> Optional[List[dict]]:
+    if key in _sector_cache:
+        item, timestamp = _sector_cache[key]
+        if time.time() - timestamp < CACHE_TTL_SECONDS:
+            return item
+        else:
+            del _sector_cache[key]
+    return None
+
+def _set_to_sector_cache(key: str, value: List[dict]):
+    _sector_cache[key] = (value, time.time())
 
 async def obtener_ruta_osrm(lat1: float, lon1: float, lat2: float, lon2: float) -> Optional[Dict[str, Any]]:
     """
@@ -78,14 +96,22 @@ async def obtener_alternativas_desvio(
     limite: int = 3
 ) -> List[dict]:
     """
-    Smart Rerouting Algorithm:
+    Smart Rerouting Algorithm con Caché Geoespacial por Sectores:
     Dado un punto de origen (lat, lon) del ciudadano, busca lugares alternativos
     cercanos (mismo tipo/categoría) que presenten un nivel de afluencia BAJO o MEDIO.
     
-    Retorna una lista ordenada de alternativas viables.
+    Retorna una lista ordenada de alternativas viables enriquecidas (OSRM, clima, tráfico).
     """
     logger.info(f"Calculando desvíos para lat:{lat_origen}, lon:{lon_origen}, cat:{categoria_objetivo}")
     
+    # Redondear coordenadas a 2 decimales para crear una "Celda/Sector" (aprox 1.1km)
+    sector_key = f"{round(lat_origen, 2)}_{round(lon_origen, 2)}_{categoria_objetivo}_{radio_metros}_{limite}"
+    cached_alternativas = _get_from_sector_cache(sector_key)
+    
+    if cached_alternativas is not None:
+        logger.info(f"[Sector Cache HIT] Retornando alternativas precalculadas para el sector {sector_key}")
+        return cached_alternativas
+
     # 1. Obtener todos los venues activos de la base de datos
     query = select(Venue).where(Venue.activo == True)
     if categoria_objetivo:
@@ -94,8 +120,6 @@ async def obtener_alternativas_desvio(
         
     result = await db.execute(query)
     venues = result.scalars().all()
-    
-    alternativas = []
     
     # Configurar zona horaria de Colombia (UTC-5)
     colombia_tz = timezone(timedelta(hours=-5))
@@ -225,5 +249,10 @@ async def obtener_alternativas_desvio(
     # Ordenar por el mejor score de movilidad integral
     alternativas.sort(key=lambda x: x["score"])
     
+    resultado = alternativas[:limite]
+    
+    # Guardar en caché del sector
+    _set_to_sector_cache(sector_key, resultado)
+    
     # Retornamos el top N de recomendaciones
-    return alternativas[:limite]
+    return resultado

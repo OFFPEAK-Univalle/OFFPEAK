@@ -10,16 +10,20 @@
 
 import React, { useState } from 'react';
 import { AreaChart, Area, ResponsiveContainer, XAxis, Tooltip, ReferenceLine } from 'recharts';
-import { ArrowLeft, Clock, AlertTriangle, Activity, MapPin, Navigation, Bus, Car } from 'lucide-react';
+import { ArrowLeft, Clock, AlertTriangle, Activity, MapPin, Navigation, Bus, Car, Shield, Heart, Umbrella, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from 'react-leaflet';
-import { venuesMapMock, parkingMock, mioMock, dailyChartData, zoneData } from '../data/mockData';
-import { createCustomIcon, createParkingIcon, createMioIcon } from '../utils/icons';
+import { venuesMapMock, parkingMock, mioMock, dailyChartData, zoneData, securityMock, healthMock, comfortMock, incidentMock } from '../data/mockData';
+import { createCustomIcon, createParkingIcon, createMioIcon, createSecurityIcon, createHealthIcon, createComfortIcon, createIncidentIcon } from '../utils/icons';
 
 export default function ZonasCriticas() {
   const [showZonas, setShowZonas] = useState(true);
   const [showParking, setShowParking] = useState(false);
   const [showMio, setShowMio] = useState(false);
+  const [showSecurity, setShowSecurity] = useState(false);
+  const [showHealth, setShowHealth] = useState(false);
+  const [showComfort, setShowComfort] = useState(false);
+  const [showIncident, setShowIncident] = useState(true);
   const [alternativas, setAlternativas] = useState([]);
   const [loadingDesvios, setLoadingDesvios] = useState(false);
 
@@ -78,13 +82,33 @@ export default function ZonasCriticas() {
                 style={{ backgroundColor: showMio ? '#f97316' : 'transparent', color: showMio ? '#fff' : 'var(--text-secondary)', border: showMio ? 'none' : '1px solid var(--border-light)', padding: '6px 12px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }}>
                 <Bus size={14} /> ESTACIONES MIO
               </button>
+              <button 
+                onClick={() => setShowSecurity(!showSecurity)}
+                style={{ backgroundColor: showSecurity ? '#1e3a8a' : 'transparent', color: showSecurity ? '#fff' : 'var(--text-secondary)', border: showSecurity ? 'none' : '1px solid var(--border-light)', padding: '6px 12px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }}>
+                <Shield size={14} /> SEGURIDAD
+              </button>
+              <button 
+                onClick={() => setShowHealth(!showHealth)}
+                style={{ backgroundColor: showHealth ? '#ef4444' : 'transparent', color: showHealth ? '#fff' : 'var(--text-secondary)', border: showHealth ? 'none' : '1px solid var(--border-light)', padding: '6px 12px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }}>
+                <Heart size={14} /> SALUD
+              </button>
+              <button 
+                onClick={() => setShowComfort(!showComfort)}
+                style={{ backgroundColor: showComfort ? '#10b981' : 'transparent', color: showComfort ? '#fff' : 'var(--text-secondary)', border: showComfort ? 'none' : '1px solid var(--border-light)', padding: '6px 12px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }}>
+                <Umbrella size={14} /> CONFORT URBANO
+              </button>
+              <button 
+                onClick={() => setShowIncident(!showIncident)}
+                style={{ backgroundColor: showIncident ? '#facc15' : 'transparent', color: showIncident ? '#000' : 'var(--text-secondary)', border: showIncident ? 'none' : '1px solid var(--border-light)', padding: '6px 12px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }}>
+                <AlertCircle size={14} /> INCIDENCIAS
+              </button>
            </div>
         </div>
         <div style={{ flex: 1, width: '100%' }}>
           <MapContainer center={[3.42158, -76.5205]} zoom={12} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
-             {/* OpenStreetMap Dark variant / CartoDB Dark Matter para emparejar el diseño oscuro Premium */}
+             {/* OpenStreetMap Voyager (Neutral) */}
             <TileLayer
-              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+              url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
               attribution='&copy; <a href="https://carto.com/">CARTO</a>'
             />
             {showZonas && venuesMapMock.map((venue) => (
@@ -124,8 +148,9 @@ export default function ZonasCriticas() {
               </React.Fragment>
             ))}
 
+            {/* Marcadores Multimodales */}
             {showParking && parkingMock.map((park) => (
-              <Marker key={park.id} position={park.coords} icon={createParkingIcon()}>
+              <Marker key={`park-${park.id}`} position={park.coords} icon={createParkingIcon()}>
                 <Popup className="premium-popup">
                   <div style={{ padding: '4px' }}>
                     <strong style={{ display: 'block', marginBottom: '4px', color: 'var(--text-primary)' }}>{park.name}</strong>
@@ -136,11 +161,56 @@ export default function ZonasCriticas() {
             ))}
 
             {showMio && mioMock.map((mio) => (
-              <Marker key={mio.id} position={mio.coords} icon={createMioIcon()}>
+              <Marker key={`mio-${mio.id}`} position={mio.coords} icon={createMioIcon()}>
                 <Popup className="premium-popup">
                   <div style={{ padding: '4px' }}>
                     <strong style={{ display: 'block', marginBottom: '4px', color: 'var(--text-primary)' }}>{mio.name}</strong>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Sistema de Transporte Masivo</span>
+                  </div>
+                </Popup>
+              </Marker>
+            ))}
+
+            {/* Marcadores Contextuales */}
+            {showSecurity && securityMock.map((sec) => (
+              <Marker key={`sec-${sec.id}`} position={sec.coords} icon={createSecurityIcon()}>
+                <Popup className="premium-popup">
+                  <div style={{ padding: '4px' }}>
+                    <strong style={{ display: 'block', marginBottom: '4px', color: 'var(--text-primary)' }}>{sec.name}</strong>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Punto de Seguridad</span>
+                  </div>
+                </Popup>
+              </Marker>
+            ))}
+
+            {showHealth && healthMock.map((health) => (
+              <Marker key={`health-${health.id}`} position={health.coords} icon={createHealthIcon()}>
+                <Popup className="premium-popup">
+                  <div style={{ padding: '4px' }}>
+                    <strong style={{ display: 'block', marginBottom: '4px', color: 'var(--text-primary)' }}>{health.name}</strong>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Centro de Atención Médica</span>
+                  </div>
+                </Popup>
+              </Marker>
+            ))}
+
+            {showComfort && comfortMock.map((comf) => (
+              <Marker key={`comf-${comf.id}`} position={comf.coords} icon={createComfortIcon()}>
+                <Popup className="premium-popup">
+                  <div style={{ padding: '4px' }}>
+                    <strong style={{ display: 'block', marginBottom: '4px', color: 'var(--text-primary)' }}>{comf.name}</strong>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Zona de Confort/Descanso</span>
+                  </div>
+                </Popup>
+              </Marker>
+            ))}
+
+            {showIncident && incidentMock.map((inc) => (
+              <Marker key={`inc-${inc.id}`} position={inc.coords} icon={createIncidentIcon()}>
+                <Popup className="premium-popup">
+                  <div style={{ padding: '4px' }}>
+                    <strong style={{ display: 'block', marginBottom: '4px', color: '#facc15' }}>{inc.name}</strong>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Evitar esta zona</span>
                   </div>
                 </Popup>
               </Marker>

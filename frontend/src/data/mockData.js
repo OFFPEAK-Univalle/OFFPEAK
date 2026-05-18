@@ -18,6 +18,26 @@ export const mioMock = [
   { id: 203, name: 'Estación Universidades Sur', coords: [3.3750, -76.5295] },
 ];
 
+export const securityMock = [
+  { id: 301, name: 'CAI Bulevar', coords: [3.4530, -76.5310] },
+  { id: 302, name: 'Estación Policía Centro', coords: [3.4490, -76.5300] },
+];
+
+export const healthMock = [
+  { id: 401, name: 'Cruz Roja Seccional Valle', coords: [3.4400, -76.5350] },
+  { id: 402, name: 'Centro de Salud', coords: [3.4550, -76.5300] },
+];
+
+export const comfortMock = [
+  { id: 501, name: 'Zona de Sombra Árboles', coords: [3.4518, -76.5315] },
+  { id: 502, name: 'Punto de Hidratación', coords: [3.4512, -76.5325] },
+];
+
+export const incidentMock = [
+  { id: 601, name: 'Bloqueo temporal', coords: [3.4505, -76.5340], type: 'roadblock' },
+];
+
+
 export const dailyChartData = [
   { time: '06 AM', value: 15 },
   { time: '09 AM', value: 25 },
