@@ -15,14 +15,14 @@ import BottomPanels from '../components/dashboard/BottomPanels';
 import DashboardFooter from '../components/dashboard/DashboardFooter';
 
 export default function DashboardPage() {
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8888/api/v1';
-  
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+
   // Estado para la Simulación de Aforo
   const [currentAfluencia, setCurrentAfluencia] = useState(0);
-  const [alertStatus, setAlertStatus] = useState('normal'); 
+  const [alertStatus, setAlertStatus] = useState('normal');
   const [isMuted, setIsMuted] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  
+
   // Estado de Datos Reales
   const [venues, setVenues] = useState([]);
   const [selectedVenueId, setSelectedVenueId] = useState("");
@@ -36,7 +36,7 @@ export default function DashboardPage() {
       .then(res => res.json())
       .then(data => {
         setVenues(data);
-        if(data.length > 0) {
+        if (data.length > 0) {
           setSelectedVenueId(data[0].id);
         }
         setLoading(false);
@@ -49,47 +49,47 @@ export default function DashboardPage() {
 
   // Cargar Forecasts del Venue Seleccionado
   useEffect(() => {
-    if(!selectedVenueId) return;
+    if (!selectedVenueId) return;
     fetch(`${API_URL}/venues/${selectedVenueId}/forecasts`)
       .then(res => res.json())
       .then(data => {
-         if(data.forecasts) {
-           // Mapeo JS (0=Dom) a Backend (0=Lun, 6=Dom)
-           const todayJS = new Date().getDay(); 
-           const backendDay = todayJS === 0 ? 6 : todayJS - 1; 
-           const todayForecasts = data.forecasts.filter(f => f.dia_semana === backendDay);
-           
-           const formatHour = (h) => {
-             if(h === 0) return '12am';
-             if(h < 12) return `${h}am`;
-             if(h === 12) return '12pm';
-             return `${h-12}pm`;
-           };
-           
-           // Extraer intervalos clave para el gráfico principal
-           const targetHours = [6, 9, 12, 15, 18, 21, 0];
-           const parsedMainChart = targetHours.map(th => {
-             const f = todayForecasts.find(tf => tf.hora === th);
-             return { time: formatHour(th), afluencia: f ? f.indice_afluencia : 0 };
-           });
-           setRealMainChartData(parsedMainChart);
+        if (data.forecasts) {
+          // Mapeo JS (0=Dom) a Backend (0=Lun, 6=Dom)
+          const todayJS = new Date().getDay();
+          const backendDay = todayJS === 0 ? 6 : todayJS - 1;
+          const todayForecasts = data.forecasts.filter(f => f.dia_semana === backendDay);
 
-           // Calcular promedios semanales para los Trend Data
-           const daysMap = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
-           const parsedTrend = daysMap.map((dayName, idx) => {
-              const dayForecasts = data.forecasts.filter(f => f.dia_semana === idx);
-              const avg = dayForecasts.length > 0 
-                ? dayForecasts.reduce((sum, f) => sum + f.indice_afluencia, 0) / dayForecasts.length 
-                : 0;
-              return { day: dayName, real: Math.round(avg * (Math.random() * 0.4 + 0.8)), promedio: Math.round(avg) };
-           });
-           setRealTrendData(parsedTrend);
+          const formatHour = (h) => {
+            if (h === 0) return '12am';
+            if (h < 12) return `${h}am`;
+            if (h === 12) return '12pm';
+            return `${h - 12}pm`;
+          };
 
-           // Actualizar afluencia actual
-           const currentHour = new Date().getHours();
-           const currentF = todayForecasts.find(tf => tf.hora === currentHour);
-           if(currentF) setCurrentAfluencia(currentF.indice_afluencia);
-         }
+          // Extraer intervalos clave para el gráfico principal
+          const targetHours = [6, 9, 12, 15, 18, 21, 0];
+          const parsedMainChart = targetHours.map(th => {
+            const f = todayForecasts.find(tf => tf.hora === th);
+            return { time: formatHour(th), afluencia: f ? f.indice_afluencia : 0 };
+          });
+          setRealMainChartData(parsedMainChart);
+
+          // Calcular promedios semanales para los Trend Data
+          const daysMap = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
+          const parsedTrend = daysMap.map((dayName, idx) => {
+            const dayForecasts = data.forecasts.filter(f => f.dia_semana === idx);
+            const avg = dayForecasts.length > 0
+              ? dayForecasts.reduce((sum, f) => sum + f.indice_afluencia, 0) / dayForecasts.length
+              : 0;
+            return { day: dayName, real: Math.round(avg * (Math.random() * 0.4 + 0.8)), promedio: Math.round(avg) };
+          });
+          setRealTrendData(parsedTrend);
+
+          // Actualizar afluencia actual
+          const currentHour = new Date().getHours();
+          const currentF = todayForecasts.find(tf => tf.hora === currentHour);
+          if (currentF) setCurrentAfluencia(currentF.indice_afluencia);
+        }
       })
       .catch(err => console.error("Error fetching forecasts:", err));
   }, [selectedVenueId, API_URL]);
@@ -125,8 +125,8 @@ export default function DashboardPage() {
 
   return (
     <div className="dashboard-container">
-      
-      <AlertBanner 
+
+      <AlertBanner
         alertStatus={alertStatus}
         currentAfluencia={currentAfluencia}
         isMuted={isMuted}
@@ -135,7 +135,7 @@ export default function DashboardPage() {
         setCurrentAfluencia={setCurrentAfluencia}
       />
 
-      <ProtocolModal 
+      <ProtocolModal
         showModal={showModal}
         setShowModal={setShowModal}
         protocolActions={protocolActions}
@@ -150,8 +150,8 @@ export default function DashboardPage() {
         {loading ? (
           <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Cargando lugares...</span>
         ) : (
-          <select 
-            value={selectedVenueId} 
+          <select
+            value={selectedVenueId}
             onChange={(e) => setSelectedVenueId(e.target.value)}
             style={{ padding: '8px 16px', borderRadius: '4px', backgroundColor: 'var(--surface-primary)', color: 'var(--text-primary)', border: '1px solid var(--border-light)' }}
           >
@@ -164,7 +164,7 @@ export default function DashboardPage() {
 
       <MainChart data={realMainChartData} />
 
-      <BottomPanels 
+      <BottomPanels
         currentAfluencia={currentAfluencia}
         alertStatus={alertStatus}
         setAlertStatus={setAlertStatus}
