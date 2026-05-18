@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 
 from .database import get_db, engine
 from .models import Base
-from .routers import venues, rerouting, admin, auth, heatmap, alerts
+from .routers import venues, rerouting, admin, auth, heatmap, alerts, multimodal
 from .services.tasks import start_cleaner_task, stop_cleaner_task
 
 @asynccontextmanager
@@ -33,7 +33,7 @@ app = FastAPI(
 # Configuración de CORS optimizada
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://offpeak-seven.vercel.app"], 
+    allow_origins=["https://offpeak-seven.vercel.app", "http://localhost:5173", "http://localhost:5174"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -46,6 +46,7 @@ app.include_router(admin.router, prefix="/api/v1/admin", tags=["Administración"
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Autenticación"])
 app.include_router(heatmap.router, prefix="/api/v1/heatmap", tags=["Heatmap"])
 app.include_router(alerts.router, prefix="/api/v1/alerts", tags=["Alerts"])
+app.include_router(multimodal.router, prefix="/api/v1/multimodal", tags=["Multimodal"])
 
 # Root endpoint con soporte para HEAD (Para el Health Check de Render)
 @app.api_route("/", methods=["GET", "HEAD"])

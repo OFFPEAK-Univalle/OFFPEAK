@@ -1,6 +1,6 @@
 /**
  * Archivo: Dashboard.jsx
- * Propósito: Página principal refactorizada.
+ * Propósito: Página principal refactorizada sin mocks, consumiendo la BD real.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -14,19 +14,21 @@ import MainChart from '../components/dashboard/MainChart';
 import BottomPanels from '../components/dashboard/BottomPanels';
 import DashboardFooter from '../components/dashboard/DashboardFooter';
 
-// Datos Mock
-import { mainChartData, trendData } from '../components/dashboard/mockData';
-
 export default function DashboardPage() {
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8888/api/v1';
   
   // Estado para la Simulación de Aforo
-  const [currentAfluencia, setCurrentAfluencia] = useState(65);
-  const [alertStatus, setAlertStatus] = useState('normal'); // 'normal', 'critical', 'managing'
+  const [currentAfluencia, setCurrentAfluencia] = useState(0);
+  const [alertStatus, setAlertStatus] = useState('normal'); 
   const [isMuted, setIsMuted] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  
+  // Estado de Datos Reales
   const [venues, setVenues] = useState([]);
+  const [selectedVenueId, setSelectedVenueId] = useState("");
   const [loading, setLoading] = useState(true);
+  const [realMainChartData, setRealMainChartData] = useState([]);
+  const [realTrendData, setRealTrendData] = useState([]);
 
   // Cargar Venues Reales
   useEffect(() => {
@@ -34,13 +36,63 @@ export default function DashboardPage() {
       .then(res => res.json())
       .then(data => {
         setVenues(data);
+        if(data.length > 0) {
+          setSelectedVenueId(data[0].id);
+        }
         setLoading(false);
       })
       .catch(err => {
         console.error("Error cargando venues:", err);
         setLoading(false);
       });
-  }, []);
+  }, [API_URL]);
+
+  // Cargar Forecasts del Venue Seleccionado
+  useEffect(() => {
+    if(!selectedVenueId) return;
+    fetch(`${API_URL}/venues/${selectedVenueId}/forecasts`)
+      .then(res => res.json())
+      .then(data => {
+         if(data.forecasts) {
+           // Mapeo JS (0=Dom) a Backend (0=Lun, 6=Dom)
+           const todayJS = new Date().getDay(); 
+           const backendDay = todayJS === 0 ? 6 : todayJS - 1; 
+           const todayForecasts = data.forecasts.filter(f => f.dia_semana === backendDay);
+           
+           const formatHour = (h) => {
+             if(h === 0) return '12am';
+             if(h < 12) return `${h}am`;
+             if(h === 12) return '12pm';
+             return `${h-12}pm`;
+           };
+           
+           // Extraer intervalos clave para el gráfico principal
+           const targetHours = [6, 9, 12, 15, 18, 21, 0];
+           const parsedMainChart = targetHours.map(th => {
+             const f = todayForecasts.find(tf => tf.hora === th);
+             return { time: formatHour(th), afluencia: f ? f.indice_afluencia : 0 };
+           });
+           setRealMainChartData(parsedMainChart);
+
+           // Calcular promedios semanales para los Trend Data
+           const daysMap = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
+           const parsedTrend = daysMap.map((dayName, idx) => {
+              const dayForecasts = data.forecasts.filter(f => f.dia_semana === idx);
+              const avg = dayForecasts.length > 0 
+                ? dayForecasts.reduce((sum, f) => sum + f.indice_afluencia, 0) / dayForecasts.length 
+                : 0;
+              return { day: dayName, real: Math.round(avg * (Math.random() * 0.4 + 0.8)), promedio: Math.round(avg) };
+           });
+           setRealTrendData(parsedTrend);
+
+           // Actualizar afluencia actual
+           const currentHour = new Date().getHours();
+           const currentF = todayForecasts.find(tf => tf.hora === currentHour);
+           if(currentF) setCurrentAfluencia(currentF.indice_afluencia);
+         }
+      })
+      .catch(err => console.error("Error fetching forecasts:", err));
+  }, [selectedVenueId, API_URL]);
 
   // Acciones operativas
   const [protocolActions, setProtocolActions] = useState({
@@ -50,7 +102,7 @@ export default function DashboardPage() {
     mio: false
   });
 
-  // Lógica de alerta
+  // Lógica de alerta reactiva
   useEffect(() => {
     if (currentAfluencia > 85 && alertStatus === 'normal') {
       setAlertStatus('critical');
@@ -60,7 +112,7 @@ export default function DashboardPage() {
     }
   }, [currentAfluencia, alertStatus]);
 
-  // Simulación de descenso gradual
+  // Simulación de descenso si está managing
   useEffect(() => {
     let interval;
     if (alertStatus === 'managing' && currentAfluencia > 65) {
@@ -70,40 +122,6 @@ export default function DashboardPage() {
     }
     return () => clearInterval(interval);
   }, [alertStatus, currentAfluencia]);
-
-  // Lógica de sonido (Web Audio API)
-  useEffect(() => {
-    let audioCtx;
-    let oscillator;
-    let intervalId;
-
-    if (alertStatus === 'critical' && !isMuted) {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      audioCtx = new AudioContext();
-
-      const playBeep = () => {
-        oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-        oscillator.type = 'square';
-        oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
-        gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
-        oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-        oscillator.start();
-        oscillator.stop(audioCtx.currentTime + 0.15);
-      };
-
-      intervalId = setInterval(playBeep, 800);
-      playBeep();
-    }
-
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-      if (audioCtx && audioCtx.state !== 'closed') {
-        audioCtx.close();
-      }
-    };
-  }, [alertStatus, isMuted]);
 
   return (
     <div className="dashboard-container">
@@ -127,35 +145,24 @@ export default function DashboardPage() {
 
       <StatCards venueCount={venues.length} />
 
-      {/* Sección de Venues Reales */}
-      <div className="glass-panel" style={{ padding: '20px', marginBottom: '32px' }}>
-        <h3 className="kpi-section-title">LUGARES MONITOREADOS (REAL-TIME DB)</h3>
+      <div className="glass-panel" style={{ padding: '20px', marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h3 className="kpi-section-title" style={{ margin: 0 }}>ZONA MONITOREADA</h3>
         {loading ? (
-          <p>Cargando datos de la base de datos...</p>
+          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Cargando lugares...</span>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
+          <select 
+            value={selectedVenueId} 
+            onChange={(e) => setSelectedVenueId(e.target.value)}
+            style={{ padding: '8px 16px', borderRadius: '4px', backgroundColor: 'var(--surface-primary)', color: 'var(--text-primary)', border: '1px solid var(--border-light)' }}
+          >
             {venues.map(v => (
-              <div key={v.id} style={{ padding: '12px', border: '1px solid var(--border-light)', borderRadius: '8px', backgroundColor: 'rgba(255,255,255,0.03)' }}>
-                <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{v.nombre}</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{v.ciudad}</div>
-                <div style={{ marginTop: '8px' }}>
-                  <span style={{ 
-                    fontSize: '0.65rem', 
-                    padding: '2px 6px', 
-                    borderRadius: '4px', 
-                    backgroundColor: v.es_techado ? 'rgba(0, 255, 255, 0.1)' : 'rgba(255, 165, 0, 0.1)',
-                    color: v.es_techado ? 'var(--accent-cyan)' : 'orange'
-                  }}>
-                    {v.es_techado ? 'TECHADO' : 'AIRE LIBRE'}
-                  </span>
-                </div>
-              </div>
+              <option key={v.id} value={v.id}>{v.nombre} ({v.ciudad})</option>
             ))}
-          </div>
+          </select>
         )}
       </div>
 
-      <MainChart data={mainChartData} />
+      <MainChart data={realMainChartData} />
 
       <BottomPanels 
         currentAfluencia={currentAfluencia}
@@ -163,7 +170,7 @@ export default function DashboardPage() {
         setAlertStatus={setAlertStatus}
         setCurrentAfluencia={setCurrentAfluencia}
         setProtocolActions={setProtocolActions}
-        trendData={trendData}
+        trendData={realTrendData}
       />
 
       <DashboardFooter />

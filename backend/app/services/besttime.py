@@ -85,7 +85,7 @@ async def _forecast_por_nombre_direccion(nombre: str, direccion: str) -> dict:
 # ─────────────────────────────
 # Función principal
 # ─────────────────────────────
-async def obtener_forecast_venue(db: AsyncSession, venue_id: str) -> dict:
+async def obtener_forecast_venue(db: AsyncSession, venue_id: str, force_refresh: bool = False) -> dict:
     """
     Orquesta la integración con BestTime para un venue dado usando un proxy de Caché local.
     Implementa mitigación SCRUM-27 (Stale-while-error) y SCRUM-28 (Límites de peticiones).
@@ -113,8 +113,8 @@ async def obtener_forecast_venue(db: AsyncSession, venue_id: str) -> dict:
     )
     cache_entry = cache_result.scalar_one_or_none()
 
-    if cache_entry and cache_entry.is_valid:
-        logger.info(f"[Caché HIT] Retornando forecast desde PostgreSQL para {venue.nombre}. Expira en: {cache_entry.expira_en}")
+    if cache_entry and not force_refresh:
+        logger.info(f"[Caché HIT Persistente] Retornando forecast real desde PostgreSQL para {venue.nombre}. Expira en: {cache_entry.expira_en}")
         return cache_entry.respuesta_raw
 
     # 3. Llamar a BestTime (Caché Miss o Expirado)
@@ -181,8 +181,8 @@ async def obtener_forecast_venue(db: AsyncSession, venue_id: str) -> dict:
     }
 
     # 5. Guardar Upsert en Caché PostgreSQL por 14 días (Filtro SCRUM-28)
-    # Se añade offset de 14 días a la fecha usando validación segura por tzinfo UTC integrada en datetime.now
-    expiracion = datetime.now(timezone.utc) + timedelta(days=14)
+    # Se añade offset de 365 días a la fecha usando validación segura para proteger de la auto-limpieza
+    expiracion = datetime.now(timezone.utc) + timedelta(days=365)
     
     if cache_entry:
         logger.info(f"[DB] Actualizando CacheEntry existente. Vida extendida hasta: {expiracion.isoformat()}")

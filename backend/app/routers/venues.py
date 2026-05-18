@@ -74,7 +74,7 @@ async def create_venue(venue_in: VenueCreate, db: AsyncSession = Depends(get_db)
             venue_id=nuevo_venue.id,
             endpoint_key="forecast_week",
             respuesta_raw=respuesta_final,
-            expira_en=datetime.now(timezone.utc) + timedelta(days=14)
+            expira_en=datetime.now(timezone.utc) + timedelta(days=365)
         )
         db.add(nuevo_cache)
         await db.commit()
@@ -111,13 +111,13 @@ async def update_venue(venue_id: uuid.UUID, datos: VenueUpdate, db: AsyncSession
     return venue
 
 @router.get("/{venue_id}/forecasts")
-async def get_venue_forecasts(venue_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+async def get_venue_forecasts(venue_id: uuid.UUID, force_refresh: bool = False, db: AsyncSession = Depends(get_db)):
     """
-    Retorna el pronóstico de un establecimiento.
-    Lo consulta en BestTime API usando el servicio.
+    Retorna el pronóstico histórico de un establecimiento.
+    Usa caché local prioritaria salvo que se exija force_refresh.
     """
     try:
-        data = await obtener_forecast_venue(db, str(venue_id))
+        data = await obtener_forecast_venue(db, str(venue_id), force_refresh)
         return data
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

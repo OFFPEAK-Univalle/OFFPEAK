@@ -1,19 +1,13 @@
 /**
  * Archivo: ZonasCriticas.jsx
- * Propósito: Visualizar el estado detallado de una zona y el mapa general.
- * Descripción:
- * 1. Nueva Integración: `react-leaflet` para un mapa interactivo premium centrado en Cali.
- * 2. Muestra un botón de regreso y el título de la zona seleccionada.
- * 3. Incorpora clases de grid responsivo `.responsive-grid` y `.responsive-grid-2-1`.
- * 4. Animaciones y estado visual estandarizado.
+ * Propósito: Visualizar el estado detallado de una zona y el mapa interactivo.
+ * Descripción: Desacoplado de Mocks. Usa BD Real y Multimodal API.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AreaChart, Area, ResponsiveContainer, XAxis, Tooltip, ReferenceLine } from 'recharts';
-import { ArrowLeft, Clock, AlertTriangle, Activity, MapPin, Navigation, Bus, Car, Shield, Heart, Umbrella, AlertCircle } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from 'react-leaflet';
-import { venuesMapMock, parkingMock, mioMock, dailyChartData, zoneData, securityMock, healthMock, comfortMock, incidentMock } from '../data/mockData';
+import { Clock, AlertTriangle, Activity, MapPin, Navigation, Bus, Car, Shield, Heart, Umbrella, AlertCircle } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import { createCustomIcon, createParkingIcon, createMioIcon, createSecurityIcon, createHealthIcon, createComfortIcon, createIncidentIcon } from '../utils/icons';
 
 export default function ZonasCriticas() {
@@ -26,19 +20,113 @@ export default function ZonasCriticas() {
   const [showHealth, setShowHealth] = useState(false);
   const [showComfort, setShowComfort] = useState(false);
   const [showIncident, setShowIncident] = useState(true);
+
+  // Estados Dinámicos de la BD
+  const [venues, setVenues] = useState([]);
+  const [selectedVenueId, setSelectedVenueId] = useState("");
+  const [multimodal, setMultimodal] = useState({ parking: [], mio: [], security: [], health: [], comfort: [], incidents: [] });
   const [alternativas, setAlternativas] = useState([]);
   const [loadingDesvios, setLoadingDesvios] = useState(false);
+
+  // Estados de Estadísticas (Zone Data)
+  const [zoneData, setZoneData] = useState({
+    nombre: "Selecciona una zona en el mapa",
+    comuna: "Esperando selección...",
+    estado: "NORMAL",
+    afluenciaActual: 0,
+    afluenciaPico: 0,
+    horaRiesgo: "--:--"
+  });
+  const [dailyChartData, setDailyChartData] = useState([]);
+
+  // 1. Cargar Marcadores Multimodales
+  useEffect(() => {
+    fetch(`${API_URL}/multimodal/markers`)
+      .then(res => res.json())
+      .then(data => setMultimodal(data))
+      .catch(err => console.error("Error fetching multimodal:", err));
+  }, [API_URL]);
+
+  // 2. Cargar Venues
+  useEffect(() => {
+    fetch(`${API_URL}/venues/`)
+      .then(res => res.json())
+      .then(data => {
+        setVenues(data);
+        if (data.length > 0) {
+          setSelectedVenueId(data[0].id); // Autoseleccionar el primero
+        }
+      })
+      .catch(err => console.error("Error fetching venues:", err));
+  }, [API_URL]);
+
+  // 3. Cargar Forecast Histórico de la Zona Seleccionada
+  useEffect(() => {
+    if(!selectedVenueId) return;
+
+    const currentVenue = venues.find(v => v.id === selectedVenueId);
+
+    fetch(`${API_URL}/venues/${selectedVenueId}/forecasts`)
+      .then(res => res.json())
+      .then(data => {
+         if(data.forecasts) {
+           const todayJS = new Date().getDay(); 
+           const backendDay = todayJS === 0 ? 6 : todayJS - 1; 
+           const todayForecasts = data.forecasts.filter(f => f.dia_semana === backendDay);
+
+           // Llenar Chart Data
+           const chartData = todayForecasts.filter(f => f.hora % 2 === 0).map(f => {
+             const ampm = f.hora >= 12 ? 'PM' : 'AM';
+             const hr = f.hora % 12 === 0 ? 12 : f.hora % 12;
+             return { time: `${hr} ${ampm}`, value: f.indice_afluencia };
+           });
+           setDailyChartData(chartData);
+
+           // Calcular KPIs
+           const currentHour = new Date().getHours();
+           const currentF = todayForecasts.find(f => f.hora === currentHour) || { indice_afluencia: 0 };
+           let maxAfluencia = 0;
+           let peakHour = "--:--";
+           
+           todayForecasts.forEach(f => {
+             if(f.indice_afluencia > maxAfluencia) {
+               maxAfluencia = f.indice_afluencia;
+               const ampm = f.hora >= 12 ? 'PM' : 'AM';
+               const hr = f.hora % 12 === 0 ? 12 : f.hora % 12;
+               peakHour = `${hr}:00 ${ampm}`;
+             }
+           });
+
+           let riesgo = "ÓPTIMO";
+           if(currentF.indice_afluencia > 80) riesgo = "CRÍTICO";
+           else if(currentF.indice_afluencia > 50) riesgo = "MODERADO";
+
+           setZoneData({
+             nombre: currentVenue ? currentVenue.nombre : "Zona",
+             comuna: currentVenue ? currentVenue.ciudad : "Cali",
+             estado: riesgo,
+             afluenciaActual: currentF.indice_afluencia,
+             afluenciaPico: maxAfluencia,
+             horaRiesgo: peakHour
+           });
+         }
+      })
+      .catch(err => console.error("Error fetching forecasts:", err));
+  }, [selectedVenueId, venues, API_URL]);
+
 
   const fetchDesvios = async () => {
     setLoadingDesvios(true);
     try {
-      // Coordenadas origen (Bulevar del Rio simulado)
+      const currentVenue = venues.find(v => v.id === selectedVenueId);
+      if(!currentVenue) return;
+
       const response = await fetch(`${API_URL}/rerouting/recommend`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          latitud: 3.4516,
-          longitud: -76.5320,
+          latitud: currentVenue.latitud,
+          longitud: currentVenue.longitud,
           categoria_objetivo: null,
           radio_metros: 3000,
           limite: 2
@@ -58,7 +146,7 @@ export default function ZonasCriticas() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '32px' }}>
       
-      {/* Nuevo Header de Mapa Responsivo (Integración Leaflet) */}
+      {/* Header de Mapa Responsivo */}
       <div className="glass-panel" style={{ padding: '0', overflow: 'hidden', height: '400px', position: 'relative', display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border-light)', display: 'flex', flexDirection: 'column', gap: '16px', backgroundColor: 'var(--surface-primary)', zIndex: 10 }}>
            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -72,7 +160,7 @@ export default function ZonasCriticas() {
               <button 
                 onClick={() => setShowZonas(!showZonas)}
                 style={{ backgroundColor: showZonas ? 'var(--accent-cyan)' : 'transparent', color: showZonas ? 'var(--bg-main)' : 'var(--text-secondary)', border: showZonas ? 'none' : '1px solid var(--border-light)', padding: '6px 12px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }}>
-                <MapPin size={14} /> ZONAS CRÍTICAS
+                <MapPin size={14} /> LUGARES
               </button>
               <button 
                 onClick={() => setShowParking(!showParking)}
@@ -108,140 +196,103 @@ export default function ZonasCriticas() {
         </div>
         <div style={{ flex: 1, width: '100%' }}>
           <MapContainer center={[3.42158, -76.5205]} zoom={12} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
-             {/* OpenStreetMap Voyager (Neutral) */}
             <TileLayer
               url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
               attribution='&copy; <a href="https://carto.com/">CARTO</a>'
             />
-            {showZonas && venuesMapMock.map((venue) => (
-              <Marker key={venue.id} position={venue.coords} icon={createCustomIcon(venue.status)}>
+            {showZonas && venues.map((venue) => (
+              <Marker 
+                key={venue.id} 
+                position={[venue.latitud, venue.longitud]} 
+                icon={createCustomIcon(selectedVenueId === venue.id ? 'critical' : 'optimal')}
+                eventHandlers={{ click: () => setSelectedVenueId(venue.id) }}
+              >
                 <Popup className="premium-popup">
-                  <div style={{ padding: '4px' }}>
-                    <strong style={{ display: 'block', marginBottom: '4px' }}>{venue.name}</strong>
-                    <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: venue.status==='critical'?'var(--status-critical)':venue.status==='moderate'?'var(--status-moderate)':'var(--status-optimal)' }}>Estado: {venue.status}</span>
+                  <div style={{ padding: '4px', textAlign: 'center' }}>
+                    <strong style={{ display: 'block', marginBottom: '4px' }}>{venue.nombre}</strong>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--accent-cyan)' }}>Seleccionado para Analítica</span>
                   </div>
                 </Popup>
               </Marker>
             ))}
-            {/* Dibujamos las alternativas recomendadas por el Algoritmo */}
+            
             {alternativas && alternativas.map((alt) => (
               <React.Fragment key={`alt-${alt.venue_id}`}>
-                <Marker 
-                  position={[alt.latitud, alt.longitud]} 
-                  icon={createCustomIcon('optimal')}
-                >
+                <Marker position={[alt.latitud, alt.longitud]} icon={createCustomIcon('optimal')}>
                   <Popup className="premium-popup">
                     <div style={{ padding: '4px' }}>
                       <strong style={{ display: 'block', marginBottom: '4px' }}>{alt.nombre}</strong>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--accent-cyan)', fontWeight: 'bold' }}>Alternativa Recomendada</span>
-                      <br/>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{alt.razon_desvio}</span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--accent-cyan)', fontWeight: 'bold' }}>Desvío Recomendado</span>
                     </div>
                   </Popup>
                 </Marker>
-                {/* Trazamos una línea desde el origen (Bulevar) hasta la alternativa */}
-                <Polyline 
-                  positions={[ [3.4516, -76.5320], [alt.latitud, alt.longitud] ]} 
-                  color="var(--accent-cyan)" 
-                  dashArray="5, 10"
-                  weight={3}
-                  opacity={0.8}
-                />
+                {(() => {
+                   const origin = venues.find(v => v.id === selectedVenueId);
+                   if (origin) {
+                     return <Polyline positions={[ [origin.latitud, origin.longitud], [alt.latitud, alt.longitud] ]} color="var(--accent-cyan)" dashArray="5, 10" weight={3} opacity={0.8} />;
+                   }
+                   return null;
+                })()}
               </React.Fragment>
             ))}
 
-            {/* Marcadores Multimodales */}
-            {showParking && parkingMock.map((park) => (
-              <Marker key={`park-${park.id}`} position={park.coords} icon={createParkingIcon()}>
-                <Popup className="premium-popup">
-                  <div style={{ padding: '4px' }}>
-                    <strong style={{ display: 'block', marginBottom: '4px', color: 'var(--text-primary)' }}>{park.name}</strong>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Disponibilidad: <span style={{color: park.status === 'optimal' ? 'var(--status-optimal)' : 'var(--status-moderate)'}}>{park.status === 'optimal' ? 'Alta' : 'Baja'}</span></span>
-                  </div>
-                </Popup>
+            {showParking && multimodal.parking.map((p) => (
+              <Marker key={`park-${p.id}`} position={p.coords} icon={createParkingIcon()}>
+                <Popup className="premium-popup"><strong>{p.name}</strong></Popup>
               </Marker>
             ))}
 
-            {showMio && mioMock.map((mio) => (
-              <Marker key={`mio-${mio.id}`} position={mio.coords} icon={createMioIcon()}>
-                <Popup className="premium-popup">
-                  <div style={{ padding: '4px' }}>
-                    <strong style={{ display: 'block', marginBottom: '4px', color: 'var(--text-primary)' }}>{mio.name}</strong>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Sistema de Transporte Masivo</span>
-                  </div>
-                </Popup>
+            {showMio && multimodal.mio.map((m) => (
+              <Marker key={`mio-${m.id}`} position={m.coords} icon={createMioIcon()}>
+                <Popup className="premium-popup"><strong>{m.name}</strong></Popup>
               </Marker>
             ))}
 
-            {/* Marcadores Contextuales */}
-            {showSecurity && securityMock.map((sec) => (
-              <Marker key={`sec-${sec.id}`} position={sec.coords} icon={createSecurityIcon()}>
-                <Popup className="premium-popup">
-                  <div style={{ padding: '4px' }}>
-                    <strong style={{ display: 'block', marginBottom: '4px', color: 'var(--text-primary)' }}>{sec.name}</strong>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Punto de Seguridad</span>
-                  </div>
-                </Popup>
+            {showSecurity && multimodal.security.map((s) => (
+              <Marker key={`sec-${s.id}`} position={s.coords} icon={createSecurityIcon()}>
+                <Popup className="premium-popup"><strong>{s.name}</strong></Popup>
               </Marker>
             ))}
 
-            {showHealth && healthMock.map((health) => (
-              <Marker key={`health-${health.id}`} position={health.coords} icon={createHealthIcon()}>
-                <Popup className="premium-popup">
-                  <div style={{ padding: '4px' }}>
-                    <strong style={{ display: 'block', marginBottom: '4px', color: 'var(--text-primary)' }}>{health.name}</strong>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Centro de Atención Médica</span>
-                  </div>
-                </Popup>
+            {showHealth && multimodal.health.map((h) => (
+              <Marker key={`health-${h.id}`} position={h.coords} icon={createHealthIcon()}>
+                <Popup className="premium-popup"><strong>{h.name}</strong></Popup>
               </Marker>
             ))}
 
-            {showComfort && comfortMock.map((comf) => (
-              <Marker key={`comf-${comf.id}`} position={comf.coords} icon={createComfortIcon()}>
-                <Popup className="premium-popup">
-                  <div style={{ padding: '4px' }}>
-                    <strong style={{ display: 'block', marginBottom: '4px', color: 'var(--text-primary)' }}>{comf.name}</strong>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Zona de Confort/Descanso</span>
-                  </div>
-                </Popup>
+            {showComfort && multimodal.comfort.map((c) => (
+              <Marker key={`comf-${c.id}`} position={c.coords} icon={createComfortIcon()}>
+                <Popup className="premium-popup"><strong>{c.name}</strong></Popup>
               </Marker>
             ))}
 
-            {showIncident && incidentMock.map((inc) => (
-              <Marker key={`inc-${inc.id}`} position={inc.coords} icon={createIncidentIcon()}>
-                <Popup className="premium-popup">
-                  <div style={{ padding: '4px' }}>
-                    <strong style={{ display: 'block', marginBottom: '4px', color: '#facc15' }}>{inc.name}</strong>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Evitar esta zona</span>
-                  </div>
-                </Popup>
+            {showIncident && multimodal.incidents.map((i) => (
+              <Marker key={`inc-${i.id}`} position={i.coords} icon={createIncidentIcon()}>
+                <Popup className="premium-popup"><strong style={{color: '#facc15'}}>{i.name}</strong></Popup>
               </Marker>
             ))}
           </MapContainer>
         </div>
       </div>
 
-      {/* Header específico de la zona */}
       <div style={{ borderBottom: '1px dashed var(--border-light)', paddingBottom: '24px', marginTop: '16px' }}>
         <div className="header-flex">
           <div>
             <h1 style={{ fontSize: '2rem', margin: '0 0 8px 0', letterSpacing: '-0.5px' }}>{zoneData.nombre}</h1>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{zoneData.comuna} • ÚLTIMA ACTUALIZACIÓN: HACE 2 MIN</span>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{zoneData.comuna} • ACTUALIZADO EN TIEMPO REAL</span>
           </div>
-          <div style={{ padding: '8px 16px', borderRadius: '30px', border: '1px solid var(--status-critical)', backgroundColor: 'var(--status-bg-critical)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--status-critical)' }}></div>
-            <span style={{ color: 'var(--status-critical)', fontSize: '0.75rem', fontWeight: 'bold' }}>ESTADO: {zoneData.estado}</span>
+          <div style={{ padding: '8px 16px', borderRadius: '30px', border: `1px solid ${zoneData.estado==='CRÍTICO'?'var(--status-critical)':'var(--status-optimal)'}`, backgroundColor: zoneData.estado==='CRÍTICO'?'var(--status-bg-critical)':'var(--status-bg-optimal)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: zoneData.estado==='CRÍTICO'?'var(--status-critical)':'var(--status-optimal)' }}></div>
+            <span style={{ color: zoneData.estado==='CRÍTICO'?'var(--status-critical)':'var(--status-optimal)', fontSize: '0.75rem', fontWeight: 'bold' }}>ESTADO: {zoneData.estado}</span>
           </div>
         </div>
       </div>
 
-      {/* KPIs usando utilidades responsivas (.responsive-grid) */}
       <div className="responsive-grid">
         <div className="glass-panel" style={{ padding: '24px' }}>
           <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 'bold' }}>AFLUENCIA ACTUAL</span>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginTop: '12px' }}>
             <span className="stat-value">{zoneData.afluenciaActual}%</span>
-            <span style={{ color: 'var(--status-moderate)', fontSize: '0.85rem' }}>+12% vs. hr anterior</span>
           </div>
         </div>
         <div className="glass-panel" style={{ padding: '24px' }}>
@@ -258,23 +309,22 @@ export default function ZonasCriticas() {
             <Clock color="var(--status-moderate)" size={24} />
           </div>
         </div>
-        <div className="glass-panel" style={{ padding: '24px', backgroundColor: 'var(--status-critical)', color: '#fff', border: 'none', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <div className="glass-panel" style={{ padding: '24px', backgroundColor: zoneData.estado==='CRÍTICO'?'var(--status-critical)':'var(--surface-primary)', color: zoneData.estado==='CRÍTICO'?'#fff':'var(--text-primary)', border: 'none', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <span style={{ fontSize: '0.75rem', fontWeight: 'bold', letterSpacing: '1px', opacity: 0.9 }}>NIVEL DE RIESGO</span>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
-            <span className="stat-value" style={{ color: '#fff' }}>CRÍTICO</span>
-            <AlertTriangle size={32} color="#fff" />
+            <span className="stat-value" style={{ color: zoneData.estado==='CRÍTICO'?'#fff':'var(--text-primary)' }}>{zoneData.estado}</span>
+            <AlertTriangle size={32} color={zoneData.estado==='CRÍTICO'?'#fff':'var(--status-moderate)'} />
           </div>
         </div>
       </div>
 
-      {/* Sección Inferior: Gráficos usando responsive layout (.responsive-grid-2-1) */}
       <div className="responsive-grid-2-1">
         <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column' }}>
           <div className="header-flex" style={{ marginBottom: '24px' }}>
             <h3 style={{ fontSize: '1rem', margin: 0, letterSpacing: '0.5px' }}>COMPORTAMIENTO DE AFLUENCIA - HOY</h3>
             <div style={{ display: 'flex', gap: '16px', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--accent-cyan)' }}/> AFLUENCIA</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><div style={{ width: '16px', borderTop: '2px dashed var(--status-critical)' }}/> UMBRAL (85%)</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><div style={{ width: '16px', borderTop: '2px dashed var(--status-critical)' }}/> UMBRAL (80%)</span>
             </div>
           </div>
           <div style={{ height: '250px', flex: 1 }}>
@@ -285,7 +335,7 @@ export default function ZonasCriticas() {
                 </defs>
                 <XAxis dataKey="time" stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} />
                 <Tooltip cursor={{stroke: 'var(--border-light)'}} contentStyle={{ backgroundColor: 'var(--surface-primary)', border: '1px solid var(--border-light)', borderRadius: '8px' }}/>
-                <ReferenceLine y={85} stroke="var(--status-critical)" strokeDasharray="3 3" />
+                <ReferenceLine y={80} stroke="var(--status-critical)" strokeDasharray="3 3" />
                 <Area type="natural" dataKey="value" stroke="var(--accent-cyan)" strokeWidth={3} fillOpacity={1} fill="url(#colFlow)" />
               </AreaChart>
             </ResponsiveContainer>
@@ -293,48 +343,20 @@ export default function ZonasCriticas() {
         </div>
 
         <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column' }}>
-          <h3 style={{ fontSize: '1rem', margin: '0 0 24px 0', letterSpacing: '0.5px' }}>HISTORIAL SEMANAL</h3>
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end', height: '150px' }}>
-              {['lun', 'mar', 'mie', 'jue', 'vie', 'sab', 'dom'].map((day, idx) => {
-                const heights = [30, 45, 40, 60, 85, 90, 50]; 
-                const isHigh = heights[idx] > 80;
-                return (
-                  <div key={day} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '16px', height: `${heights[idx]}px`, backgroundColor: isHigh ? 'var(--status-critical)' : 'var(--surface-secondary)', borderRadius: '4px' }}></div>
-                    <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>{day}</span>
-                  </div>
-                )
-              })}
-            </div>
+          <h3 style={{ fontSize: '1rem', margin: '0 0 24px 0', letterSpacing: '0.5px' }}>ACCIONES RÁPIDAS</h3>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <button 
+              onClick={fetchDesvios}
+              disabled={loadingDesvios || !selectedVenueId}
+              style={{ backgroundColor: 'var(--accent-cyan)', color: 'var(--bg-main)', border: 'none', padding: '16px', borderRadius: '8px', fontWeight: 'bold', cursor: loadingDesvios||!selectedVenueId ? 'not-allowed' : 'pointer', letterSpacing: '1px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', opacity: loadingDesvios||!selectedVenueId ? 0.7 : 1 }}>
+              <Navigation size={18} /> {loadingDesvios ? 'CALCULANDO...' : 'CALCULAR DESVÍO DE TRÁFICO'}
+            </button>
+            <button style={{ backgroundColor: 'var(--status-bg-critical)', color: 'var(--status-critical)', border: '1px solid var(--status-critical)', padding: '16px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', letterSpacing: '1px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <AlertTriangle size={18} /> ALERTA INSTITUCIONAL
+            </button>
           </div>
-          <p style={{ margin: '16px 0 0', fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center' }}>Promedio histórico vs actual</p>
         </div>
       </div>
-
-      {/* Call to Action Bar */}
-      <div className="glass-panel" style={{ padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'var(--surface-secondary)', borderLeft: '4px solid var(--status-critical)', flexWrap: 'wrap', gap: '16px' }}>
-        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--status-bg-critical)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <AlertTriangle color="var(--status-critical)" size={20} />
-          </div>
-          <div>
-            <h4 style={{ margin: 0, fontSize: '1rem' }}>Protocolo de Respuesta Activo</h4>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Se recomienda intervención inmediata por superación.</span>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-          <button 
-            onClick={fetchDesvios}
-            disabled={loadingDesvios}
-            style={{ backgroundColor: 'var(--accent-cyan)', color: 'var(--bg-main)', border: 'none', padding: '12px 24px', borderRadius: '6px', fontWeight: 'bold', cursor: loadingDesvios ? 'not-allowed' : 'pointer', letterSpacing: '1px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '8px', opacity: loadingDesvios ? 0.7 : 1 }}>
-            <Navigation size={16} />
-            {loadingDesvios ? 'CALCULANDO...' : 'CALCULAR DESVÍO'}
-          </button>
-          <button style={{ backgroundColor: 'var(--status-bg-critical)', color: 'var(--status-critical)', border: '1px solid var(--status-critical)', padding: '12px 24px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', letterSpacing: '1px', fontSize: '0.75rem' }}>ALERTA INSTITUCIONAL</button>
-        </div>
-      </div>
-
     </div>
   );
 }
