@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Settings, Database, RefreshCw, Server, AlertCircle, CheckCircle } from 'lucide-react';
 
 export default function AdminDashboard() {
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8888/api/v1';
   const [cleanerStatus, setCleanerStatus] = useState(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
 
   const fetchStatus = async () => {
     try {
-      const response = await fetch('http://localhost:8001/api/v1/admin/cleaner/status');
+      const response = await fetch(`${API_URL}/admin/cleaner/status`);
       if (response.ok) {
         const data = await response.json();
         setCleanerStatus(data);
@@ -22,7 +23,7 @@ export default function AdminDashboard() {
     setLoading(true);
     setMessage(null);
     try {
-      const response = await fetch('http://localhost:8001/api/v1/admin/cleaner/force-run', {
+      const response = await fetch(`${API_URL}/admin/cleaner/force-run`, {
         method: 'POST'
       });
       if (response.ok) {

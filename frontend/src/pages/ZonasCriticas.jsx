@@ -17,6 +17,8 @@ import { venuesMapMock, parkingMock, mioMock, dailyChartData, zoneData, security
 import { createCustomIcon, createParkingIcon, createMioIcon, createSecurityIcon, createHealthIcon, createComfortIcon, createIncidentIcon } from '../utils/icons';
 
 export default function ZonasCriticas() {
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8888/api/v1';
+
   const [showZonas, setShowZonas] = useState(true);
   const [showParking, setShowParking] = useState(false);
   const [showMio, setShowMio] = useState(false);
@@ -31,7 +33,7 @@ export default function ZonasCriticas() {
     setLoadingDesvios(true);
     try {
       // Coordenadas origen (Bulevar del Rio simulado)
-      const response = await fetch('http://localhost:8001/api/v1/rerouting/recommend', {
+      const response = await fetch(`${API_URL}/rerouting/recommend`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
