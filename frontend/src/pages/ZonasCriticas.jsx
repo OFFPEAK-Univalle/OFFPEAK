@@ -11,7 +11,7 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet'
 import { createCustomIcon, createParkingIcon, createMioIcon, createSecurityIcon, createHealthIcon, createComfortIcon, createIncidentIcon } from '../utils/icons';
 
 export default function ZonasCriticas() {
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8888/api/v1';
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
   const [showZonas, setShowZonas] = useState(true);
   const [showParking, setShowParking] = useState(false);
@@ -248,22 +248,27 @@ export default function ZonasCriticas() {
               url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
               attribution='&copy; <a href="https://carto.com/">CARTO</a>'
             />
-            {showZonas && venues.map((venue) => (
-              <Marker
-                key={venue.id}
-                position={[venue.latitud, venue.longitud]}
-                icon={createCustomIcon(selectedVenueId === venue.id ? 'critical' : 'optimal')}
-                eventHandlers={{ click: () => setSelectedVenueId(venue.id) }}
-              >
-                <Popup className="premium-popup">
-                  <div style={{ padding: '4px', textAlign: 'center' }}>
-                    <strong style={{ display: 'block', marginBottom: '4px' }}>{venue.nombre}</strong>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--accent-cyan)' }}>Seleccionado para Analítica</span>
-                  </div>
-                </Popup>
-              </Marker>
-            ))}
-
+            {showZonas && venues
+              .filter(venue =>
+                venue.latitud && venue.latitud !== 0 &&
+                venue.longitud && venue.longitud !== 0
+              )
+              .map((venue) => (
+                <Marker
+                  key={venue.id}
+                  position={[venue.latitud, venue.longitud]}
+                  icon={createCustomIcon(selectedVenueId === venue.id ? 'selected' : 'optimal')}
+                  eventHandlers={{ click: () => setSelectedVenueId(venue.id) }}
+                >
+                  <Popup className="premium-popup">
+                    <div style={{ padding: '4px', textAlign: 'center' }}>
+                      <strong style={{ display: 'block', marginBottom: '4px' }}>{venue.nombre}</strong>
+                      <span style={{ fontSize: '0.75rem', color: '#22d3ee' }}>Seleccionado para Analítica</span>
+                    </div>
+                  </Popup>
+                </Marker>
+              ))
+            }
             {alternativas && alternativas.map((alt) => (
               <React.Fragment key={`alt-${alt.venue_id}`}>
                 <Marker position={[alt.latitud, alt.longitud]} icon={createCustomIcon('optimal')}>
