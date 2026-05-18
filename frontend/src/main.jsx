@@ -1,22 +1,28 @@
-/**
- * Archivo: main.jsx
- * Propósito: Punto de entrada principal de la aplicación React.
- * Descripción:
- * 1. Importa React y ReactDOM para renderizar la interfaz.
- * 2. Importa el archivo global de estilos (index.css).
- * 3. Importa el componente raíz de la aplicación (App).
- * 4. Renderiza el componente 'App' dentro del DOM en el contenedor con id 'root',
- *    utilizando React.StrictMode para advertir sobre posibles problemas en la app.
- */
-
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import * as Sentry from "@sentry/react";
 import App from './App.jsx';
 import 'leaflet/dist/leaflet.css';
 import './index.css';
 
+const SENTRY_DSN_FRONT = import.meta.env.VITE_SENTRY_DSN;
+
+if (SENTRY_DSN_FRONT) {
+  Sentry.init({
+    dsn: SENTRY_DSN_FRONT,
+    integrations: [
+      Sentry.browserTracingIntegration(),
+      Sentry.replayIntegration(),
+    ],
+    // Captura de rendimiento y sesiones
+    tracesSampleRate: 1.0,
+    replaysSessionSampleRate: 0.1,
+    replaysOnErrorSampleRate: 1.0,
+  });
+}
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <App />
-  </React.StrictMode>,
+  </React.StrictMode>
 );
