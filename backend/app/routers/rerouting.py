@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 import time
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -46,10 +46,15 @@ class AlternativaResponse(BaseModel):
     latitud: float
     longitud: float
     distancia_metros: float
+    tiempo_viaje_minutos: int
     nivel_afluencia: str
     indice_afluencia: int
     categoria: Optional[str] = None
     razon_desvio: str
+    clima_actual: str
+    incidencias_viales: str
+    score: float
+    geometria_ruta: Optional[Dict[str, Any]] = None
 
 @router.post("/recommend", response_model=List[AlternativaResponse], dependencies=[Depends(check_rate_limit)])
 async def recommend_detours(req: ReroutingRequest, db: AsyncSession = Depends(get_db)):
